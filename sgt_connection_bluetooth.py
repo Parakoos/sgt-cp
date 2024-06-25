@@ -3,30 +3,44 @@ log = logging.getLogger()
 import time
 from view import View
 from sgt_connection import SgtConnection
-from settings import BLE_DEVICE_NAME
 
 from adafruit_ble import BLERadio
 from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
-
+import json
 
 class SgtConnectionBluetooth(SgtConnection):
-    def __init__(self, view: View, on_connect: callable[[], None], on_state_line: callable[[str, float], None]):
+    def __init__(self,
+                 view: View,
+                 suggestions: dict,
+                 ble_device_name: str,
+                 on_state_line: callable[[str, float], None],
+                 on_error: callable[[], None] = None,
+                 ):
         super().__init__(view)
-        self.on_connect = on_connect
         self.on_state_line = on_state_line
+        self.on_error=on_error
         self.ble = BLERadio()
         self.uart = UARTService()
         self.advertisement = ProvideServicesAdvertisement(self.uart)
-        self.ble.name = BLE_DEVICE_NAME
+        self.ble.name = ble_device_name
         self.incomplete_line_read = None
         self.last_is_connected_check = False
+        self.all_read_text = ''
+        self.text_read = ''
+        self.last_line_executed = None
+        self.suggestions = suggestions
+        self.byte_array = bytearray(20)
 
     def is_connected(self) -> bool:
         if self.ble.connected and not self.last_is_connected_check:
             self.view.set_connection_progress_text('Connected')
             self.ble.stop_advertising()
-            self.on_connect()
+            timeout = time.monotonic() + 2
+            while time.monotonic() < timeout:
+                self.view.animate()
+            self.send('Enable ACK')
+            self.send('Poll')
         self.last_is_connected_check = self.ble.connected
         return self.ble.connected
 
@@ -35,41 +49,56 @@ class SgtConnectionBluetooth(SgtConnection):
         self.ble.start_advertising(self.advertisement)
 
     def poll(self) -> None:
+        if self.uart.in_waiting == 0:
+            if self.incomplete_line_read and time.monotonic() - self.incomplete_line_read[0] > 6:
+                log.debug('Old incomplete line. Clear the buffer and line, then call on_error. %s', self.incomplete_line_read)
+                self.uart.reset_input_buffer()
+                self.incomplete_line_read = None
+                if self.on_error:
+                    self.on_error()
+            return
+
         while self.uart.in_waiting > 0:
-            read_text_ts = time.monotonic()
-            read_text = str(self.uart.read(self.uart.in_waiting), 'utf-8')
-            lines = [(read_text_ts, line) for line in read_text.split("\n")]
-            log.debug("read_lines: %s", lines)
+            bytes_read = self.uart.readinto(buf=self.byte_array, nbytes=self.uart.in_waiting)
+            read_text = str(self.byte_array[:bytes_read], 'utf-8')
+            # log.debug('ACK of line %s', read_text)
+            self.send('ACK')
+            self.all_read_text += read_text
+            lines = [(time.monotonic(), line) for line in read_text.split("\n")]
+            if self.incomplete_line_read != None:
+                lines[0] = (self.incomplete_line_read[0], self.incomplete_line_read[1]+lines[0][1])
+                self.incomplete_line_read = None
 
             if len(lines) == 0:
                 return
             last_item = lines.pop()
-            if last_item[1] == '':
-                do_this_line = lines.pop()
-                if len(lines) > 0:
-                    log.debug(f"SKIP: {lines}")
-                time.sleep(0.01)
-                if self.uart.in_waiting:
-                    log.debug(f"SKIP AFTER ALL: {do_this_line}")
-                    self.incomplete_line_read = None
-                else:
-                    try:
-                        log.debug(f"EXECUTE LINE: {do_this_line}")
-                        self.on_state_line(do_this_line[1], do_this_line[0])
-                    except:
-                        if self.incomplete_line_read != None:
-                            line_prefixed_with_incomplete = (self.incomplete_line_read[0], self.incomplete_line_read[1] + do_this_line[1])
-                            log.debug(f"EXECUTE LINE (with incomplete): {line_prefixed_with_incomplete}")
-                            self.on_state_line(line_prefixed_with_incomplete[1], line_prefixed_with_incomplete[0])
-                    finally:
-                        self.incomplete_line_read = None
-                        print("The 'try except' is finished")
-            else:
-                if len(lines) > 0:
-                    log.debug(f"SKIP: {lines}")
-                log.debug(f"Incomplete Line: {last_item}")
-                self.incomplete_line_read = last_item
+            lines = [line for line in lines if line[1] != '']
+            if len(lines[:-1]) > 0:
+                print(f'SKIP: {lines[:-1]}')
 
+            # log.debug("Last Item: %s, lines: %s", last_item, lines)
+            if last_item[1] == '':
+                if len(lines) > 0:
+                    do_this_line = lines.pop()
+                    if do_this_line[1] == 'GET SETUP SUGGESTIONS':
+                        log.debug('SENDING SUGGESTED SETUP')
+                        self.send(json.dumps(self.suggestions))
+                        self.last_line_executed = do_this_line[1]
+                    elif (do_this_line[1] == self.last_line_executed):
+                        log.debug(f"SKIP DUPLICATE LINE: {self.last_line_executed}")
+                    else:
+                        log.debug(f"EXECUTE LINE: {do_this_line}")
+                        try:
+                            self.on_state_line(do_this_line[1], do_this_line[0])
+                            self.last_line_executed = do_this_line[1]
+                        except Exception as e:
+                            log.exception(e)
+                            if self.on_error:
+                                self.on_error()
+            else:
+                log.debug('incomplete line: "%s"', last_item[1])
+                self.incomplete_line_read = last_item
+                time.sleep(0.05)
     def send(self, value: str, on_success: callable[[], None] = None):
         log.info(value)
         if on_success:

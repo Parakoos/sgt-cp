@@ -3,23 +3,48 @@ log = logging.getLogger()
 import json
 import time
 
-def simplify_color(color):
-    return (simplify_color_part(color[0]), simplify_color_part(color[1]), simplify_color_part(color[2]))
-
-def simplify_color_part(color_part):
-    return (color_part//86)*127
-
 def get_state_float(state, key, default=0):
     return float(state[key]) if key in state and state[key] != None and state[key] != "" else default
 
 def get_state_int(state, key, default=0):
     return int(state[key]) if key in state and state[key] != None and state[key] != "" else default
 
+def get_state_color(state, key, default=0xffffff):
+    color_hex = get_state_string(state, key, '')
+    return int(color_hex, 16) if len(color_hex) == 6 else default
+
 def get_state_string(state, key, default=""):
     return state[key] if key in state and state[key] != None else default
 
-def get_action_string(actions, key):
-    return actions[key]['action'] if key in actions and actions[key] != None else None
+def get_sub_state(state, key) -> dict:
+    return state[key] if key in state and state[key] != None else {}
+
+def get_action(state, key):
+    return Action(state[key]) if key in state and state[key] != None else None
+
+def get_players(state, key):
+    return [Player(x) for x in state[key]] if key in state and state[key] != None else []
+
+class Action():
+    def __init__(self, actionState) -> None:
+        self.action = get_state_string(actionState, 'action', default=None)
+        self.label = get_state_string(actionState, 'label', default=None)
+
+    def __repr__(self):
+        return f'Action<{self.action} {self.label}>'
+
+class Player():
+    def __init__(self, playerState) -> None:
+        self.name = get_state_string(playerState, 'name', default=None)
+        self.seat = get_state_int(playerState, 'seat', default=None)
+        self.action = get_state_string(playerState, 'action', default=None)
+        self.color = get_state_color(playerState, 'color')
+
+    def __repr__(self):
+        if self.action == '':
+            return f'Player<{self.seat}, {hex(self.color)} {self.name}>'
+        else:
+            return f'Player<{self.seat}, {hex(self.color)} {self.name} action={self.action} >'
 
 class GameState():
     # Constants
@@ -126,19 +151,17 @@ class GameState():
         self.name = get_state_string(state, 'name', "(no name)")
 
         # (not sand) The current or next-up player color
-        color_hex = get_state_string(state, 'color')
-        self.color = ((int(color_hex[0:2],16),int(color_hex[2:4],16),int(color_hex[4:6],16))) if len(color_hex) == 6 else (255,255,255)
-        self.color_simplified = simplify_color(self.color)
+        self.color = get_state_color(state, 'color')
 
         # Different actions. Either None or a string starting with 'game/{action}' that
         # can be sent to the MQTT commands queue to issue commands
-        actions = state['actions'] if 'actions' in state and state['actions'] != None else {}
-        self.action_primary = get_action_string(actions, 'primary')
-        self.action_secondary = get_action_string(actions, 'secondary')
-        self.action_admin = get_action_string(actions, 'admin')
-        self.action_pause = get_action_string(actions, 'pause')
+        actions = get_sub_state(state, 'actions')
+        self.action_primary = get_action(actions, 'primary')
+        self.action_secondary = get_action(actions, 'secondary')
+        self.action_admin = get_action(actions, 'admin')
+        self.action_pause = get_action(actions, 'pause')
 
-        self.players = state['players'] if 'players' in state else []
+        self.players = get_players(state, 'players')
 
     def has_action(self, action):
         return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
@@ -162,7 +185,7 @@ class GameState():
         if (self.name):
             facts.append(f'name={self.name}')
         if (self.color):
-            facts.append(f'color={self.color}')
+            facts.append(f'color={hex(self.color)}')
         if (self.action_primary):
             facts.append(f'a_primary={self.action_primary}')
         if (self.action_secondary):

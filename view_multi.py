@@ -7,8 +7,10 @@ class ViewMulti(View):
         self.views = views
 
     def animate(self):
+        interruptable = True
         for view in self.views:
-            view.animate()
+            interruptable = view.animate() and interruptable
+        return interruptable
 
     def show_error(self, exception):
         for view in self.views:

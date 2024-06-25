@@ -24,7 +24,7 @@ class ViewPlayground(View):
         self.animation = Solid(self.pixels, BLACK)
 
     def animate(self):
-        self.animation.animate()
+        return self.animation.animate()
 
     def show_error(self, exception):
         self.switch_to_error()

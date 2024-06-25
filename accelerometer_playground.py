@@ -1,6 +1,5 @@
 from accelerometer import Accelerometer
 from adafruit_circuitplayground import cp
-from settings import DOUBLE_SHAKE_PREVENTION_TIMEOUT
 import time
 
 class Accelerometer_Playground(Accelerometer):
@@ -14,7 +13,7 @@ class Accelerometer_Playground(Accelerometer):
     def loop(self):
         if (
             self.set_shake_callback != None
-            and time.monotonic() - self.last_shake_ts > DOUBLE_SHAKE_PREVENTION_TIMEOUT
+            and time.monotonic() - self.last_shake_ts > self.double_shake_prevention_timeout
             and cp.shake(shake_threshold=self.shake_threshold)
         ):
             self.set_shake_callback()

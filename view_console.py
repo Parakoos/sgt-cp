@@ -28,11 +28,11 @@ class ViewConsole(View):
         print(f"-> Setup")
     def switch_to_end(self, state: GameState, old_state: GameState):
         print(f"-> Game Over")
-    def switch_to_trying_to_connect(self, state: GameState, old_state: GameState):
-        print(f"-> Trying to Connect")
-    def switch_to_connecting(self, state: GameState, old_state: GameState):
-        print(f"-> Connecting")
-    def switch_to_error(self, state: GameState, old_state: GameState):
+    def switch_to_no_game(self):
+        print(f"-> No Game In Progress")
+    def switch_to_not_connected(self):
+        print(f"-> Not Connecting")
+    def switch_to_error(self):
         print(f"-> Error")
     def on_state_update(self, state: GameState, old_state: GameState):
         print(state)
