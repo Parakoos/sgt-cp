@@ -4,6 +4,7 @@ from easing import EasingBase
 import adafruit_fancyled.adafruit_fancyled as fancy
 from adafruit_pixelbuf import PixelBuf
 import adafruit_logging as logging
+from utils import mix
 log = logging.getLogger()
 
 class SgtAnimation():
@@ -12,7 +13,7 @@ class SgtAnimation():
         self.current_index = -1
         self.animation_start_ts = 0
         self.timed_by_cycles = False
-        self.color=color
+        self.color=members[0][0].color
         self.transition = None
         self.next()
 
@@ -34,8 +35,8 @@ class SgtAnimation():
             easing, start_time, start_color, target_color = self.transition
             elapsed_time = time.monotonic() - start_time
             fade_progress = easing.ease(elapsed_time)
-            color = fancy.mix(start_color, target_color, fade_progress)
-            self.set_color(color.pack())
+            color = mix(start_color, target_color, fade_progress)
+            self.set_color(color)
             if elapsed_time >= easing.duration:
                 self.transition = None
 
@@ -51,17 +52,15 @@ class SgtAnimation():
                 self.next()
         return self.transition == None and self.members[self.current_index][2]
 
-    def set_color(self, color: int, transition: EasingBase = None):
+    def set_color(self, color: tuple[int,int,int], transition: EasingBase = None):
         if transition:
-            start_color = fancy.unpack(self.color) if self.color else fancy.CRGB(*self.members[self.current_index][0].color)
-            target_color = fancy.unpack(color)
-            self.transition = (transition, time.monotonic(), start_color, target_color)
+            self.transition = (transition, time.monotonic(), self.color, color)
         else:
             self.color = color
             self.members[self.current_index][0].color = color
 
 class SgtAnimationGroup():
-    def __init__(self, *animations: SgtAnimation, parent_pixel_obj: PixelBuf) -> None:
+    def __init__(self, animations: list[SgtAnimation], parent_pixel_obj: PixelBuf) -> None:
         self.animations = animations
         self.parent_pixel_obj = parent_pixel_obj
 

@@ -9,9 +9,9 @@ def get_state_float(state, key, default=0):
 def get_state_int(state, key, default=0):
     return int(state[key]) if key in state and state[key] != None and state[key] != "" else default
 
-def get_state_color(state, key, default=0xffffff):
+def get_state_color(state, key, default=(255,255,255)):
     color_hex = get_state_string(state, key, '')
-    return int(color_hex, 16) if len(color_hex) == 6 else default
+    return ((int(color_hex[0:2],16),int(color_hex[2:4],16),int(color_hex[4:6],16))) if len(color_hex) == 6 else default
 
 def get_state_string(state, key, default=""):
     return state[key] if key in state and state[key] != None else default
@@ -42,9 +42,9 @@ class Player():
 
     def __repr__(self):
         if self.action == '':
-            return f'Player<{self.seat}, {hex(self.color)} {self.name}>'
+            return f'Player<{self.seat}, {self.color} {self.name}>'
         else:
-            return f'Player<{self.seat}, {hex(self.color)} {self.name} action={self.action} >'
+            return f'Player<{self.seat}, {self.color} {self.name} action={self.action} >'
 
 class GameState():
     # Constants
@@ -163,6 +163,14 @@ class GameState():
 
         self.players = get_players(state, 'players')
 
+        state_var = state['seat'] if 'seat' in state and state['seat'] != None else None
+        if isinstance(state_var, int):
+            self.seat = [state_var]
+        elif isinstance(state_var, list):
+            self.seat = [int(seat) for seat in state_var]
+        else:
+            self.seat = []
+
     def has_action(self, action):
         return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
@@ -185,7 +193,7 @@ class GameState():
         if (self.name):
             facts.append(f'name={self.name}')
         if (self.color):
-            facts.append(f'color={hex(self.color)}')
+            facts.append(f'color={self.color}')
         if (self.action_primary):
             facts.append(f'a_primary={self.action_primary}')
         if (self.action_secondary):

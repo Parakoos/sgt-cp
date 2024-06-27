@@ -8,6 +8,7 @@ from adafruit_ble import BLERadio
 from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
 import json
+from traceback import print_exception
 
 class SgtConnectionBluetooth(SgtConnection):
     def __init__(self,
@@ -92,7 +93,7 @@ class SgtConnectionBluetooth(SgtConnection):
                             self.on_state_line(do_this_line[1], do_this_line[0])
                             self.last_line_executed = do_this_line[1]
                         except Exception as e:
-                            log.exception(e)
+                            print_exception(e)
                             if self.on_error:
                                 self.on_error()
             else:
