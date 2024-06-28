@@ -5,7 +5,9 @@ from game_state import GameState
 from adafruit_circuitplayground import cp
 
 # =================== Settings =================== #
-LED_BRIGHTNESS = 0.1                # 0-1. How bright do you want the LED?
+SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
+LED_BRIGHTNESS_NORMAL = 0.1         # 0-1. How bright do you want the LED?
+LED_BRIGHTNESS_HIGHLIGHT = 0.5      # When highlighting something, how bright should it be?
 SHAKE_THRESHOLD = 20                # How sensitive should it be for detecting shakes?
 DOUBLE_SHAKE_PREVENTION_TIMEOUT = 3 # Seconds after a shake when no second shake can be detected
 ORIENTATION_ON_THRESHOLD = 9.0      # 0-10. Higher number, less sensitive.
@@ -60,12 +62,31 @@ import time
 from view_multi import ViewMulti
 from view_console import ViewConsole
 from view_table_outline import ViewTableOutline
-cp.pixels.brightness = LED_BRIGHTNESS
+cp.pixels.brightness = LED_BRIGHTNESS_NORMAL
 
 from adafruit_dotstar import DotStar
-dots = DotStar(board.SCL, board.SDA, 30, brightness=LED_BRIGHTNESS)
-view = ViewMulti([ViewConsole(), ViewTableOutline(dots)])
+dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
+view = ViewMulti([ViewConsole(), ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS, brightness_normal=LED_BRIGHTNESS_NORMAL, brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT )])
 view.set_state(GameState())
+
+def set_state(log_label, state):
+    log.debug(log_label)
+    view.set_state(GameState(json_state_string=state, timestamp_offset=0))
+    while not view.animate():
+        log.debug('In an active animation')
+    log.debug('No more active animation')
+set_state('Game starts, green player 1.',           '{"players":[{"seat":1,"name":"Gus","color":"486bfa"}],"gameStateVersion":1,"ts":0,"state":"st"}')
+set_state('Player 1 changes color to magenta',      '{"players":[{"seat":1,"name":"Gus","color":"41ff00"}],"gameStateVersion":2,"ts":0,"state":"st"}')
+set_state('Add Player 2, red',                      '{"players":[{"seat":1,"name":"Gus","color":"41ff00"},              {"seat":2,"name":"Don","color":"ff0b00"}],              "gameStateVersion":3,"ts":0,"state":"st"}')
+set_state('RED moves seat to #4',                   '{"players":[{"seat":1,"name":"Gus","color":"41ff00"},              {"seat":4,"name":"Don","color":"ff0b00"}],              "gameStateVersion":4,"ts":0,"state":"st"}')
+# set_state('Start the game',                         '{"players":[{"seat":1,"name":"Gus","color":"41ff00","action":"pr"},{"seat":4,"name":"Don","color":"ff0b00"}],              "gameStateVersion":5,"ts":0,"timerMode":"cu","state":"pl","color":"41ff00","name":"Gus","seat":1,"turnTime":0,"playerTime":null,"totalPlayTime":0,"actions":{"primary":{"label":"Start Game","action":"game/startTurn"},"admin":{"label":"Start Setup","action":"game/startSetupAdmin"}}}')
+# set_state('End Turn',                               '{"players":[{"seat":1,"name":"Gus","color":"41ff00"},              {"seat":4,"name":"Don","color":"ff0b00","action":"pr"}],"gameStateVersion":6,"ts":0,"timerMode":"cu","state":"pl","color":"ff0b00","name":"Don","seat":4,"turnTime":0,"playerTime":null,"totalPlayTime":1,"actions":{"primary":{"label":"End Turn","action":"game/endTurn"},"admin":{"label":"Start mid-turn admin","action":"game/startMidTurnAdmin"},"pause":{"label":"Pause","action":"game/pause"},"undo":{"label":"Undo","action":"game/undo"}}}')
+
+log.debug('done')
+
+while True:
+     view.animate()
+     pass
 
 # ---------- SOUNDS -------------#
 from tone_playground import TonePlayground

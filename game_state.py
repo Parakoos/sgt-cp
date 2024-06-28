@@ -174,6 +174,9 @@ class GameState():
     def has_action(self, action):
         return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
+    def get_active_player(self):
+        return next((p for p in self.players if p.seat in self.seat)) if len(self.seat) == 1 else None
+
     def __repr__(self):
         facts = []
         if (self.timestamp):
@@ -194,6 +197,8 @@ class GameState():
             facts.append(f'name={self.name}')
         if (self.color):
             facts.append(f'color={self.color}')
+        if (self.seat):
+            facts.append(f'seat={self.seat}')
         if (self.action_primary):
             facts.append(f'a_primary={self.action_primary}')
         if (self.action_secondary):
