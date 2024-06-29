@@ -1,7 +1,7 @@
 import adafruit_logging as logging
 log = logging.getLogger()
 from time import monotonic
-from utils import find
+from utils import find_string
 
 AXIS_X = 0
 AXIS_Y = 1
@@ -28,7 +28,7 @@ class Orientation:
 
     def loop(self):
         acceleration = self.accelerometer.get_acceleration()
-        current_orientation = find((orientation for orientation in self.callbacks.keys() if acceleration[orientation[0]]*orientation[1] >= self.on_threshold))
+        current_orientation = find_string((orientation for orientation in self.callbacks.keys() if acceleration[orientation[0]]*orientation[1] >= self.on_threshold))
         if current_orientation == self.orientation:
             # Make sure we don't change the orientation by clearing out the tmp
             self.orientation_tmp = None

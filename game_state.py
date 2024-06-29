@@ -2,6 +2,7 @@ import adafruit_logging as logging
 log = logging.getLogger()
 import json
 import time
+from utils import find_thing
 
 def get_state_float(state, key, default=0):
     return float(state[key]) if key in state and state[key] != None and state[key] != "" else default
@@ -44,7 +45,7 @@ class Player():
         if self.action == '':
             return f'Player<{self.seat}, {self.color} {self.name}>'
         else:
-            return f'Player<{self.seat}, {self.color} {self.name} action={self.action} >'
+            return f'Player<{self.seat}, {self.color} {self.name} action={self.action}>'
 
 class GameState():
     # Constants
@@ -175,7 +176,15 @@ class GameState():
         return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
     def get_active_player(self):
-        return next((p for p in self.players if p.seat in self.seat)) if len(self.seat) == 1 else None
+        if len(self.seat) == 1:
+            return next((p for p in self.players if p.seat in self.seat))
+        elif len(self.seat) == 0:
+            print(self.players)
+            for p in self.players:
+                print(p.seat, p.action, p.action == 'pr')
+            return find_thing((p for p in self.players if p.action == 'pr'), None)
+        else:
+            return None
 
     def __repr__(self):
         facts = []

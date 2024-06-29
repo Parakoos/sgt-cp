@@ -4,7 +4,19 @@ import adafruit_fancyled.adafruit_fancyled as fancy
 import adafruit_logging as logging
 log = logging.getLogger()
 
+def find_thing(i: iter[any], default: any) -> any:
+	try:
+		return next(i)
+	except StopIteration:
+		return default
+
 def find_int(i: iter[int], default: int) -> int:
+	try:
+		return next(i)
+	except StopIteration:
+		return default
+
+def find_string(i: iter[str], default: str = None) -> str|None:
 	try:
 		return next(i)
 	except StopIteration:
@@ -51,5 +63,40 @@ class TransitionFunction():
 		if self.start_time == None:
 			self.start_time = monotonic()
 		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
-		self.callback(self.easing.ease(elapsed_time), self.callback_data)
+		progress = self.easing.ease(elapsed_time)
+		if self.callback_data != None:
+			self.callback(progress, self.callback_data)
+		else:
+			self.callback(progress)
 		return self.easing.duration == elapsed_time
+
+class ColorTransitionFunction():
+	def __init__(self, from_color: tuple[int,int,int], to_color: tuple[int,int,int], easing: EasingBase, callback: callable[[tuple[int,int,int], any|None], None], callback_data: any = None) -> None:
+		self.start_time = None
+		self.easing = easing
+		self.callback = callback
+		self.callback_data = callback_data
+		self.from_color = from_color
+		self.to_color = to_color
+
+	def loop(self):
+		if self.start_time == None:
+			self.start_time = monotonic()
+		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
+		progress = self.easing.ease(elapsed_time)
+		mixed_color = mix(self.from_color, self.to_color, progress)
+		if self.callback_data != None:
+			self.callback(mixed_color, self.callback_data)
+		else:
+			self.callback(mixed_color)
+		return self.easing.duration == elapsed_time
+
+class ParallellTransitionFunctions():
+	def __init__(self, *fns: TransitionFunction) -> None:
+		self.fns = fns
+
+	def loop(self):
+		is_done = True
+		for fn in self.fns:
+			is_done = fn.loop() and is_done
+		return is_done

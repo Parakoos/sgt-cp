@@ -3,6 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 from game_state import GameState
 from adafruit_circuitplayground import cp
+from easing import LinearInOut, BounceEaseInOut
 
 # =================== Settings =================== #
 SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
@@ -13,7 +14,10 @@ DOUBLE_SHAKE_PREVENTION_TIMEOUT = 3 # Seconds after a shake when no second shake
 ORIENTATION_ON_THRESHOLD = 9.0      # 0-10. Higher number, less sensitive.
 ORIENTATION_OFF_THRESHOLD = 4.0     # 0-10. Higher number, more sensitive.
 ORIENTATION_CHANGE_DELAY = 1        # How long to debounce changes in orientation
-
+EASE_FADE = LinearInOut             # Easing function for color fades
+EASE_FADE_DURATION = 0.5            # Duration of color fades
+EASE_LINE = BounceEaseInOut         # Easing function for moving the active player line
+EASE_LINE_PIXEL_PER_SEC = 5         # How was the active player line moves (average)
 # =============== End of Settings ================ #
 
 
@@ -66,27 +70,20 @@ cp.pixels.brightness = LED_BRIGHTNESS_NORMAL
 
 from adafruit_dotstar import DotStar
 dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
-view = ViewMulti([ViewConsole(), ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS, brightness_normal=LED_BRIGHTNESS_NORMAL, brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT )])
+view = ViewMulti([
+     ViewConsole(),
+     ViewTableOutline(
+          dots,
+          seat_definitions=SEAT_DEFINITIONS,
+          brightness_normal=LED_BRIGHTNESS_NORMAL,
+          brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT,
+          ease_fade=EASE_FADE,
+          ease_fade_duration=EASE_FADE_DURATION,
+          ease_line=EASE_LINE,
+          ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
+          )
+     ])
 view.set_state(GameState())
-
-def set_state(log_label, state):
-    log.debug(log_label)
-    view.set_state(GameState(json_state_string=state, timestamp_offset=0))
-    while not view.animate():
-        log.debug('In an active animation')
-    log.debug('No more active animation')
-set_state('Game starts, green player 1.',           '{"players":[{"seat":1,"name":"Gus","color":"486bfa"}],"gameStateVersion":1,"ts":0,"state":"st"}')
-set_state('Player 1 changes color to magenta',      '{"players":[{"seat":1,"name":"Gus","color":"41ff00"}],"gameStateVersion":2,"ts":0,"state":"st"}')
-set_state('Add Player 2, red',                      '{"players":[{"seat":1,"name":"Gus","color":"41ff00"},              {"seat":2,"name":"Don","color":"ff0b00"}],              "gameStateVersion":3,"ts":0,"state":"st"}')
-set_state('RED moves seat to #4',                   '{"players":[{"seat":1,"name":"Gus","color":"41ff00"},              {"seat":4,"name":"Don","color":"ff0b00"}],              "gameStateVersion":4,"ts":0,"state":"st"}')
-# set_state('Start the game',                         '{"players":[{"seat":1,"name":"Gus","color":"41ff00","action":"pr"},{"seat":4,"name":"Don","color":"ff0b00"}],              "gameStateVersion":5,"ts":0,"timerMode":"cu","state":"pl","color":"41ff00","name":"Gus","seat":1,"turnTime":0,"playerTime":null,"totalPlayTime":0,"actions":{"primary":{"label":"Start Game","action":"game/startTurn"},"admin":{"label":"Start Setup","action":"game/startSetupAdmin"}}}')
-# set_state('End Turn',                               '{"players":[{"seat":1,"name":"Gus","color":"41ff00"},              {"seat":4,"name":"Don","color":"ff0b00","action":"pr"}],"gameStateVersion":6,"ts":0,"timerMode":"cu","state":"pl","color":"ff0b00","name":"Don","seat":4,"turnTime":0,"playerTime":null,"totalPlayTime":1,"actions":{"primary":{"label":"End Turn","action":"game/endTurn"},"admin":{"label":"Start mid-turn admin","action":"game/startMidTurnAdmin"},"pause":{"label":"Pause","action":"game/pause"},"undo":{"label":"Undo","action":"game/undo"}}}')
-
-log.debug('done')
-
-while True:
-     view.animate()
-     pass
 
 # ---------- SOUNDS -------------#
 from tone_playground import TonePlayground
