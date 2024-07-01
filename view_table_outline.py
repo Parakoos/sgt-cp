@@ -157,15 +157,15 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 
     def animate(self):
         self.pixels.fill(BLACK)
-        has_no_more_transitions = True
+        has_more_transitions = False
         for seat_line in self.seat_lines:
             if len(seat_line.transitions) > 0:
                 if(seat_line.transitions[0].loop()):
                     seat_line.transitions = seat_line.transitions[1:]
-            has_no_more_transitions = has_no_more_transitions and len(seat_line.transitions) == 0
+            has_more_transitions = has_more_transitions or len(seat_line.transitions) > 0
             self.draw_line(seat_line.line)
         self.pixels.show()
-        return has_no_more_transitions
+        return has_more_transitions
 
     def set_line_length(self, line_length: float, seat: int):
         self.seat_lines[seat].line.length = line_length
@@ -209,13 +209,17 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
         self.ease_line_pixels_per_seconds = ease_line_pixels_per_seconds
 
     def animate(self):
+        if self.seat_line == None:
+            self.pixels.fill(BLACK)
+            self.pixels.show()
+            return False
         self.pixels.fill(self.color_background)
         if len(self.seat_line.transitions) > 0:
             if(self.seat_line.transitions[0].loop()):
                 self.seat_line.transitions = self.seat_line.transitions[1:]
         self.draw_line(self.seat_line.line)
         self.pixels.show()
-        return len(self.seat_line.transitions) == 0
+        return len(self.seat_line.transitions) > 0
 
     def set_color_normal(self, color: tuple[int,int,int]):
         self.color_background = color

@@ -3,7 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
-from easing import LinearInOut, BounceEaseOut
+# from easing import LinearInOut, BounceEaseOut
 
 # =================== Settings =================== #
 # PIXELS_PIN = board.IO43             # Pin of the neopixel strip
@@ -119,7 +119,6 @@ for btn_pin in BUTTON_PINS:
 
 
 is_polling = None
-from gc import mem_free
 # ---------- MAIN LOOP -------------#
 while True:
     if not sgt_connection.is_connected():
@@ -127,13 +126,13 @@ while True:
     while not sgt_connection.is_connected():
           view.animate()
     while sgt_connection.is_connected():
-        interruptable = view.animate()
+        busy_animating = view.animate()
+        busy_pressing_buttons = buttons.loop()
+        interruptable = not(busy_animating or busy_pressing_buttons)
         if interruptable and is_polling == False:
             log.debug('======== ENABLE POLLING ========')
         if not interruptable and is_polling == True:
             log.debug('======== DISABLE POLLING ========')
         is_polling = interruptable
         if is_polling:
-            log.debug('Free memory: %s', mem_free())
             sgt_connection.poll()
-        buttons.loop()

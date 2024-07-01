@@ -50,7 +50,7 @@ class SgtAnimation():
         else:
             if time.monotonic() - self.animation_start_ts >= animation_timing:
                 self.next()
-        return self.transition == None and self.members[self.current_index][2]
+        return not(self.transition == None and self.members[self.current_index][2])
 
     def set_color(self, color: tuple[int,int,int], transition: EasingBase = None):
         if transition:
@@ -65,11 +65,11 @@ class SgtAnimationGroup():
         self.parent_pixel_obj = parent_pixel_obj
 
     def animate(self, show=True) -> True:
-        interruptable = True
+        busy_animating = False
         for animation in self.animations:
-            interruptable = animation.animate(False) and interruptable
+            busy_animating = animation.animate(False) or busy_animating
         self.parent_pixel_obj.show()
-        return interruptable
+        return busy_animating
 
 class SgtSolid(Animation):
     def __init__(self, pixel_object, speed, color, name=None):

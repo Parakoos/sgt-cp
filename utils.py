@@ -60,6 +60,9 @@ class TransitionFunction():
 		pass
 
 	def loop(self):
+		"""
+		:returns: true if the transition has completed.
+		"""
 		if self.start_time == None:
 			self.start_time = monotonic()
 		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)

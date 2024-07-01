@@ -23,9 +23,10 @@ EASE_LINE_PIXEL_PER_SEC = 5         # How was the active player line moves (aver
 
 # Suggested Script and Action Mapping
 # These are sent on connection to the SGT to pre-populate the Action/Write scripts for quick save.
-BLE_DEVICE_NAME = "Hex Table"
+BLE_DEVICE_NAME = "Hex Table (Playground)"
 BLUETOOTH_FIELD_DIVIDER = ';'
-BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtGameStateVersion','sgtName','sgtSeat','sgtTs','sgtPlayerSeats','sgtPlayerColors','sgtPlayerNames','sgtPlayerActions','sgtActionPrimary','sgtActionInactive','sgtActionSecondary','sgtActionAdmin','sgtActionPause','sgtActionUndo']
+# BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtGameStateVersion','sgtName','sgtSeat','sgtTs','sgtPlayerSeats','sgtPlayerColors','sgtPlayerNames','sgtPlayerActions','sgtActionPrimary','sgtActionInactive','sgtActionSecondary','sgtActionAdmin','sgtActionPause','sgtActionUndo']
+BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtPlayerSeats','sgtPlayerColors','sgtPlayerActions']
 suggestions = {
     "script": [
         f'0 %0A{BLUETOOTH_FIELD_DIVIDER.join(BLUETOOTH_FIELD_ORDER)}%0A'
@@ -153,7 +154,6 @@ for btn_pin in BUTTON_PINS:
 buttons.set_fallback(tone.cascade)
 
 is_polling = None
-from gc import mem_free
 # ---------- MAIN LOOP -------------#
 while True:
     if not sgt_connection.is_connected():
@@ -161,7 +161,9 @@ while True:
     while not sgt_connection.is_connected():
           view.animate()
     while sgt_connection.is_connected():
-        interruptable = view.animate()
+        busy_animating = view.animate()
+        busy_pressing_buttons = buttons.loop()
+        interruptable = not(busy_animating or busy_pressing_buttons)
         if interruptable and is_polling == False:
             log.debug('======== ENABLE POLLING ========')
         if not interruptable and is_polling == True:
@@ -169,8 +171,6 @@ while True:
         is_polling = interruptable
         if is_polling:
             time.sleep(1) # Simulate delay in checking connection
-            log.debug('Free memory: %s', mem_free())
             sgt_connection.poll()
-        buttons.loop()
         accelerometer.loop()
         orientation.loop()

@@ -7,7 +7,7 @@ class View():
         self.state = None
 
     def animate(self) -> bool:
-        "Return true of the animation is in between animation cycles. This is a good time to do blocking tasks as it won't freeze an animation."
+        "Return true of the animation is busy. Returns false if the animation is static."
         return True
     def show_error(self, exception):
         pass

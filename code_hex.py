@@ -44,7 +44,7 @@ from adafruit_74hc595 import ShiftRegister74HC595
 latch_pin = DigitalInOut(LATCH_PIN)
 spi = SPI(SPI_CLOCK_PIN, MOSI=SPI_MOSI_PIN)
 sr = ShiftRegister74HC595(spi, latch_pin)
-arcade_leds=[sr.get_pin(s) for s in range(len(SEAT_DEFINITIONS))]
+arcade_leds=[sr.get_pin(s+1) for s in range(len(SEAT_DEFINITIONS))]
 
 # ---------- VIEW SETUP -------------#
 from view_multi import ViewMulti
@@ -114,7 +114,6 @@ for btn_pin in BUTTON_PINS:
 
 
 is_polling = None
-from gc import mem_free
 # ---------- MAIN LOOP -------------#
 while True:
     if not sgt_connection.is_connected():
@@ -122,13 +121,13 @@ while True:
     while not sgt_connection.is_connected():
           view.animate()
     while sgt_connection.is_connected():
-        interruptable = view.animate()
+        busy_animating = view.animate()
+        busy_pressing_buttons = buttons.loop()
+        interruptable = not(busy_animating or busy_pressing_buttons)
         if interruptable and is_polling == False:
             log.debug('======== ENABLE POLLING ========')
         if not interruptable and is_polling == True:
             log.debug('======== DISABLE POLLING ========')
         is_polling = interruptable
         if is_polling:
-            log.debug('Free memory: %s', mem_free())
             sgt_connection.poll()
-        buttons.loop()

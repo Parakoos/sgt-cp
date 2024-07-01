@@ -96,8 +96,10 @@ class Buttons():
                     return
 
     def loop(self):
+        "Return true if any keys are busy, meaning keypresses have been registered but not yet executed."
         self.detect_button_presses()
         self.handle_button_presses()
+        return len(self.pressed_keys) > 0
 
     def set_callback(self, pin: Pin, presses = 1, long_press=False, callback: callable[[Pin, int, bool]: None] | None = None):
         key = (pin, presses, long_press)
