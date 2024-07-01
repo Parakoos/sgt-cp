@@ -81,7 +81,7 @@ class SgtConnectionBluetooth(SgtConnection):
             if last_item[1] == '':
                 if len(lines) > 0:
                     do_this_line = lines.pop()
-                    if do_this_line[1] == 'GET SETUP SUGGESTIONS':
+                    if do_this_line[1] == 'GET SETUP':
                         log.debug('SENDING SUGGESTED SETUP')
                         self.send(json.dumps(self.suggestions))
                         self.last_line_executed = do_this_line[1]
@@ -100,8 +100,35 @@ class SgtConnectionBluetooth(SgtConnection):
                 log.debug('incomplete line: "%s"', last_item[1])
                 self.incomplete_line_read = last_item
                 time.sleep(0.05)
-    def send(self, value: str, on_success: callable[[], None] = None):
-        log.info(value)
-        if on_success:
-            on_success()
+    def send(self, value: str|None):
+        if value == None:
+            return
+        log.info("-> %s", value)
         self.uart.write((value+"\n").encode("utf-8"))
+
+    def send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        action = super().send_primary(seat, on_success, on_failure)
+        if action != None and seat != None:
+            self.send(f'{action} #{seat}')
+        else:
+            self.send(action)
+    def send_secondary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        action = super().send_secondary(seat, on_success, on_failure)
+        if action != None and seat != None:
+            self.send(f'{action} #{seat}')
+        else:
+            self.send(action)
+    def send_toggle_admin(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_toggle_admin(on_success, on_failure))
+    def send_admin_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_admin_on(on_success, on_failure))
+    def send_admin_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_admin_off(on_success, on_failure))
+    def send_toggle_pause(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_toggle_pause(on_success, on_failure))
+    def send_pause_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_pause_on(on_success, on_failure))
+    def send_pause_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_pause_off(on_success, on_failure))
+    def send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+        self.send(super().send_undo(on_success, on_failure))

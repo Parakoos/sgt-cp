@@ -44,16 +44,15 @@ suggestions = {
         # ('From Face Down', 'remoteActionTurnAdminOff'),
         # ('Switch ON', 'remoteActionTurnPauseOn'),
         # ('Switch OFF', 'remoteActionTurnPauseOff'),
-        # ('Do Primary', 'remoteActionPrimary'),
-        # ('Do Secondary', 'remoteActionSecondary'),
-        # ('Do Undo', 'remoteActionUndo'),
-        # ('Toggle Admin', 'remoteActionToggleAdmin'),
-        # ('Admin On', 'remoteActionTurnAdminOn'),
-        # ('Admin Off', 'remoteActionTurnAdminOff'),
-        # ('Toggle Pause', 'remoteActionTogglePause'),
-        # ('Pause On', 'remoteActionTurnPauseOn'),
-        # ('Pause Off', 'remoteActionTurnPauseOff'),
-        # ('Reorder', 'remoteActionReorder'),
+        ('Primary', 'remoteActionPrimary'),
+        ('Secondary', 'remoteActionSecondary'),
+        ('Undo', 'remoteActionUndo'),
+        ('ToggleAdmin', 'remoteActionToggleAdmin'),
+        ('TurnAdminOn', 'remoteActionTurnAdminOn'),
+        ('TurnAdminOff', 'remoteActionTurnAdminOff'),
+        ('TogglePause', 'remoteActionTogglePause'),
+        ('TurnPauseOn', 'remoteActionTurnPauseOn'),
+        ('TurnPauseOff', 'remoteActionTurnPauseOff'),
     ],
     "actionMapName": "Hardcoded Actions",
 }
@@ -66,7 +65,11 @@ import time
 from view_multi import ViewMulti
 from view_console import ViewConsole
 from view_table_outline import ViewTableOutline
+from view_seated_action_leds import ViewSeatedActionLeds
+from pixel_as_digital_out import PixelAsDigitalOut
 cp.pixels.brightness = LED_BRIGHTNESS_NORMAL
+
+arcade_leds = [PixelAsDigitalOut(cp.pixels, s) for s in range(len(SEAT_DEFINITIONS))]
 
 from adafruit_dotstar import DotStar
 dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
@@ -81,7 +84,8 @@ view = ViewMulti([
           ease_fade_duration=EASE_FADE_DURATION,
           ease_line=EASE_LINE,
           ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
-          )
+          ),
+     ViewSeatedActionLeds(arcade_leds),
      ])
 view.set_state(GameState())
 
@@ -118,17 +122,38 @@ orientation.set_callback(AXIS_Z, DIR_NEG, lambda _: sgt_connection.send("To Face
 
 # ---------- BUTTONS SETUP -------------#
 from buttons import Buttons
-buttons = Buttons({
-    board.BUTTON_A: True,
-    board.BUTTON_B: True,
-})
-buttons.set_callback(board.BUTTON_A, callback = lambda : sgt_connection.send("Button A", on_success=tone.success))
-buttons.set_callback(board.BUTTON_B, callback = lambda : sgt_connection.send("Button B", on_success=tone.success))
-buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=tone.success))
+from microcontroller import Pin
+BUTTON_PINS = (board.BUTTON_A, board.BUTTON_B)
+button_pin_to_val_when_pressed = {}
+for btn_pin in BUTTON_PINS:
+    button_pin_to_val_when_pressed[btn_pin] = True
+buttons = Buttons(button_pin_to_val_when_pressed)
+def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+    if long_press:
+        if presses == 1:
+            sgt_connection.send_toggle_admin(on_success=tone.success, on_failure=tone.error)
+        elif presses == 2:
+            sgt_connection.send_toggle_pause(on_success=tone.success, on_failure=tone.error)
+        elif presses == 3:
+            sgt_connection.send_undo(on_success=tone.success, on_failure=tone.error)
+    else:
+        seat = BUTTON_PINS.index(btn_pin) + 1
+        if presses == 1:
+            sgt_connection.send_primary(seat=seat, on_success=tone.success, on_failure=tone.error)
+        elif presses == 2:
+            sgt_connection.send_secondary(seat=seat, on_success=tone.success, on_failure=tone.error)
+
+for btn_pin in BUTTON_PINS:
+    buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
+    buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+    buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
+    buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
+    buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
+# buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=tone.success))
 buttons.set_fallback(tone.cascade)
 
 is_polling = None
-from gc import collect, mem_free
+from gc import mem_free
 # ---------- MAIN LOOP -------------#
 while True:
     if not sgt_connection.is_connected():

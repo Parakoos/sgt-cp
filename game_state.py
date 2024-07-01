@@ -15,7 +15,7 @@ def get_state_color(state, key, default=(255,255,255)):
     return ((int(color_hex[0:2],16),int(color_hex[2:4],16),int(color_hex[4:6],16))) if len(color_hex) == 6 else default
 
 def get_state_string(state, key, default=""):
-    return state[key] if key in state and state[key] != None else default
+    return state[key] if key in state and state[key] != None and len(state[key].strip()) > 0 else default
 
 def get_sub_state(state, key) -> dict:
     return state[key] if key in state and state[key] != None else {}
@@ -70,7 +70,12 @@ class GameState():
                  timestamp_offset = 0):
         state = {}
         if (json_state_string != None):
-            state = json.loads(json_state_string)
+            try:
+                state = json.loads(json_state_string)
+            except Exception as e:
+                print(json_state_string)
+                log.exception(e)
+                raise e
         elif ble_state_string != None and ble_field_order != None and ble_field_divider != None:
             values = ble_state_string.split(ble_field_divider)
             if len(values) != len(ble_field_order):
@@ -179,12 +184,12 @@ class GameState():
         if len(self.seat) == 1:
             return next((p for p in self.players if p.seat in self.seat))
         elif len(self.seat) == 0:
-            print(self.players)
-            for p in self.players:
-                print(p.seat, p.action, p.action == 'pr')
             return find_thing((p for p in self.players if p.action == 'pr'), None)
         else:
             return None
+
+    def get_player_by_seat(self, seat: int) -> Player | None:
+        return find_thing((p for p in self.players if p.seat == seat), None)
 
     def __repr__(self):
         facts = []

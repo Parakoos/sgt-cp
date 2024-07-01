@@ -53,7 +53,7 @@ class Buttons():
                             if pin in self.pressed_keys:
                                 del self.pressed_keys[pin]
                             self.pressed_pins.remove(pin)
-                        multi_key_callback()
+                        multi_key_callback(self.pressed_pins)
                         break
 
                 if event.released and pin in self.pressed_pins:
@@ -99,21 +99,21 @@ class Buttons():
         self.detect_button_presses()
         self.handle_button_presses()
 
-    def set_callback(self, pin: Pin, presses = 1, long_press=False, callback: callable[[]: None] | None = None):
+    def set_callback(self, pin: Pin, presses = 1, long_press=False, callback: callable[[Pin, int, bool]: None] | None = None):
         key = (pin, presses, long_press)
         if callback == None:
             del self.callbacks[key]
         else:
             self.callbacks[key] = callback
 
-    def set_callback_multikey(self, pins: set[Pin], callback: callable[[]: None] | None = None):
+    def set_callback_multikey(self, pins: set[Pin], callback: callable[[set[Pin]]: None] | None = None):
         key = tuple(pins)
         if callback == None:
             del self.callbacks[key]
         else:
             self.callbacks[key] = callback
 
-    def set_fallback(self, callback: callable[[]: None] | None = None):
+    def set_fallback(self, callback: callable[[Pin, int, bool]: None] | None = None):
         if callback == None:
             del self.callbacks[None]
         else:
@@ -124,4 +124,4 @@ class Buttons():
         if cb == None:
             cb = self.callbacks.get(None)
         if cb != None:
-            cb()
+            cb(*key)
