@@ -1,15 +1,18 @@
 from view import View
-from game_state import GameState
+from game_state import GameState, Player
 from neopixel import NeoPixel
 from easing import EasingBase
+from adafruit_led_animation.animation.rainbowcomet import RainbowComet
+from adafruit_led_animation.animation.comet import Comet
 from sgt_animation import SgtAnimation, SgtSolid
-from utils import find_color, set_brightness, mix, TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction
+from utils import find_thing, set_brightness, TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction
 from math import ceil
 import adafruit_logging as logging
 log = logging.getLogger()
 
 BLACK = (0,0,0)
 BLUE = (0,0,255)
+RED = (255,0,0)
 
 class ViewTableOutline(View):
     def __init__(self,
@@ -21,7 +24,7 @@ class ViewTableOutline(View):
             ease_fade_duration: float,
             ease_line: EasingBase,
             ease_line_pixels_per_seconds: int,
-            refresh_rate: float=0.001,
+            refresh_rate: float=0.01,
         ):
         super().__init__()
         self.pixels = pixels
@@ -39,56 +42,55 @@ class ViewTableOutline(View):
         self.switch_to_not_connected()
     def animate(self):
         return self.animation.animate()
-    def show_error(self, exception):
-        raise Exception('Not implemented yet')
     def set_connection_progress_text(self, text):
         pass
     def switch_to_playing(self, state: GameState, old_state: GameState):
-        if isinstance(self.animation, SgtSeatedMultiplayerAnimation):
-            active_player = state.get_active_player()
-            if active_player == None:
-                raise Exception('No active player!')
-            for seat_zero_index in range(self.seat_count):
-                seat = seat_zero_index + 1
-                if seat == active_player.seat:
-                    pass
-                else:
-                    def cb(progress: float, cb_data: tuple[int, tuple[int,int,int], tuple[int,int,int]]):
-                        self.animation.seat_lines[cb_data[0]].line.color = mix(cb_data[1], cb_data[2], progress)
-                    current_color = self.animation.seat_lines[seat_zero_index].line.color
-                    self.animation.seat_lines[seat_zero_index].line.length = self.seat_definitions[seat_zero_index][1]
-                    self.animation.seat_lines[seat_zero_index].transitions = [TransitionFunction(self.ease_fade(0, 1, self.ease_fade_duration), cb, (seat_zero_index, current_color, set_brightness(active_player.color, self.brightness_normal)))]
-            while not self.animate():
-                pass
-        else:
-            transition = ColorTransitionFunction(self.animation.color, BLACK, self.ease_fade(0, 1, self.ease_fade_duration), self.animation.set_color)
-            while not transition.loop():
-                pass
-        self.animation = SgtSeatedSingleplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration, self.ease_line, self.ease_line_pixels_per_seconds)
+        self._activate_singleplayer_animation()
     def switch_to_simultaneous_turn(self, state: GameState, old_state: GameState):
-        raise Exception('Not implemented yet')
+        self._activate_multiplayer_animation()
     def switch_to_admin_time(self, state: GameState, old_state: GameState):
-        raise Exception('Not implemented yet')
+        for player in state.players:
+            if player.action == 'in':
+                self._activate_multiplayer_animation()
+                return
+            elif player.action != None:
+                self._activate_singleplayer_animation()
+                return
+        raise Exception('Weird admin state...')
     def switch_to_paused(self, state: GameState, old_state: GameState):
-        raise Exception('Not implemented yet')
+        self.animation = SgtAnimation(
+            (RainbowComet(self.pixels, self.refresh_rate, tail_length=round(len(self.pixels)/0.5), bounce=True), 1, False),
+            (SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLACK, self.brightness_highlight)), 0.5, True),
+        )
     def switch_to_sandtimer_running(self, state: GameState, old_state: GameState):
         raise Exception('Not implemented yet')
     def switch_to_sandtimer_not_running(self, state: GameState, old_state: GameState):
         raise Exception('Not implemented yet')
     def switch_to_start(self, state: GameState, old_state: GameState):
-        if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
-            self.animation = SgtSeatedMultiplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration)
+        self._activate_multiplayer_animation()
     def switch_to_end(self, state: GameState, old_state: GameState):
-        raise Exception('Not implemented yet')
+        self._activate_multiplayer_animation()
     def switch_to_no_game(self):
-        raise Exception('Not implemented yet')
+        self.animation = SgtAnimation(
+            (RainbowComet(self.pixels, self.refresh_rate, tail_length=round(len(self.pixels)/0.5), bounce=True), 1, False),
+            (SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLACK, self.brightness_highlight)), 0.5, True),
+        )
     def switch_to_not_connected(self):
         self.animation = SgtAnimation((SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLUE, self.brightness_highlight)), None, True))
     def switch_to_error(self):
-        raise Exception('Not implemented yet')
+        self.animation = SgtAnimation(
+            (Comet(self.pixels, self.refresh_rate, RED, tail_length=round(len(self.pixels)/0.5), bounce=True), 1, False),
+            (SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLACK, self.brightness_highlight)), 0.5, True),
+        )
     def on_state_update(self, state: GameState, old_state: GameState):
         if isinstance(self.animation, SgtSeatedAnimation):
             self.animation.on_state_update(state, old_state)
+    def _activate_multiplayer_animation(self):
+        if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
+            self.animation = SgtSeatedMultiplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration)
+    def _activate_singleplayer_animation(self):
+        if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
+            self.animation = SgtSeatedSingleplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration, self.ease_line, self.ease_line_pixels_per_seconds)
 
 class Line():
     def __init__(self, midpoint: float, length: float, color: tuple[int, int, int]) -> None:
@@ -155,6 +157,17 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
         super().__init__(seat_definitions, pixels, brightness_normal, brightness_highlight, ease_fade, ease_fade_duration)
         self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK), transitions=[]) for s in seat_definitions)
 
+        # Fade to black
+        def _set_brightness(brightness: float):
+            pixels.brightness = brightness
+            pixels.show()
+        saved_brightness = pixels.brightness
+        tranny = TransitionFunction(self.ease_fade(saved_brightness, 0, self.ease_fade_duration), _set_brightness)
+        while not tranny.loop():
+            pass
+        self.animate()
+        pixels.brightness = saved_brightness
+
     def animate(self):
         self.pixels.fill(BLACK)
         has_more_transitions = False
@@ -174,18 +187,42 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 
     def on_state_update(self, state: GameState, old_state: GameState):
         for seat, line in enumerate(self.seat_definitions):
-            old_color = find_color((p.color for p in old_state.players if p.seat == seat+1), None)
-            new_color = find_color((p.color for p in state.players if p.seat == seat+1), None)
-            if old_color == None and new_color != None:
+            old_color = self.seat_lines[seat].line.color
+            old_line_length = self.seat_lines[seat].line.length
+            new_color = None
+            new_line_length = line[1]
+            player = find_thing((p for p in state.players if p.seat == seat+1), None)
+            if not isinstance(player, Player):
+                new_color = None
+            elif state.state == 'si':
+                if (seat+1) in state.seat:
+                    # Player is involved.
+                    new_color = player.color
+                    if player.action != 'in':
+                        # Player has passed
+                        new_line_length = ceil(new_line_length / 4)
+            elif state.state == 'ad':
+                if (seat+1) in state.seat:
+                    # Player is involved. Since it is an admin turn, all involved players gets a short line.
+                    new_color = player.color
+                    new_line_length = ceil(new_line_length / 4)
+            else:
+                new_color = player.color
+
+            if old_color == BLACK and new_color != None:
                 self.seat_lines[seat].line.length = 0
                 self.seat_lines[seat].line.color = new_color
-                self.seat_lines[seat].transitions = [TransitionFunction(self.ease_fade(0, line[1], self.ease_fade_duration), self.set_line_length, seat)]
-            elif old_color != None and new_color == None:
-                self.seat_lines[seat].transitions = [TransitionFunction(self.ease_fade(self.seat_lines[seat].line.length, 0, self.ease_fade_duration), self.set_line_length, seat)]
-            elif old_color != None and old_color != new_color:
-                self.seat_lines[seat].line.length = line[1]
-                self.seat_lines[seat].transitions = [ColorTransitionFunction(from_color=old_color, to_color=new_color, easing=self.ease_fade(0, 1, self.ease_fade_duration), callback=self.set_line_color, callback_data=seat)]
-        while not self.animate():
+                self.seat_lines[seat].transitions = [TransitionFunction(self.ease_fade(0, new_line_length, self.ease_fade_duration), self.set_line_length, seat)]
+            elif old_color != BLACK and new_color == None:
+                self.seat_lines[seat].transitions = [TransitionFunction(self.ease_fade(old_line_length, 0, self.ease_fade_duration), self.set_line_length, seat)]
+            elif old_color != BLACK and (old_color != new_color or old_line_length != new_line_length):
+                trannies = []
+                if old_color != new_color:
+                    trannies.append(ColorTransitionFunction(from_color=old_color, to_color=new_color, easing=self.ease_fade(0, 1, self.ease_fade_duration), callback=self.set_line_color, callback_data=seat))
+                if old_line_length != new_line_length:
+                    trannies.append(TransitionFunction(self.ease_fade(old_line_length, new_line_length, self.ease_fade_duration), self.set_line_length, seat))
+                self.seat_lines[seat].transitions = [ParallellTransitionFunctions(*trannies)]
+        while self.animate():
             pass
 
 class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
@@ -207,6 +244,17 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
         self.seat_line = None
         self.ease_line = ease_line
         self.ease_line_pixels_per_seconds = ease_line_pixels_per_seconds
+
+        # Fade to black
+        def _set_brightness(brightness: float):
+            pixels.brightness = brightness
+            pixels.show()
+        saved_brightness = pixels.brightness
+        tranny = TransitionFunction(self.ease_fade(saved_brightness, 0, self.ease_fade_duration), _set_brightness)
+        while not tranny.loop():
+            pass
+        self.animate()
+        pixels.brightness = saved_brightness
 
     def animate(self):
         if self.seat_line == None:
@@ -243,7 +291,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 
         line_transitions = []
 
-        bg_color = set_brightness(active_player.color, self.brightness_normal)
+        bg_color = set_brightness(active_player.color, self.brightness_normal) if state.state == 'pl' else BLACK
         fg_color = set_brightness(active_player.color, self.brightness_highlight)
 
         from_pixel = self.seat_line.line.midpoint
@@ -276,7 +324,11 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
                 trans_fade_in,
             ]
         else:
-            if self.color_background != bg_color:
-                line_transitions.append(ColorTransitionFunction(from_color=self.color_background, to_color=bg_color, easing=self.ease_fade(0, 1, self.ease_fade_duration), callback=self.set_color_normal))
+            self.seat_line.transitions = []
             if len(line_transitions) > 0:
-                self.seat_line.transitions = [ParallellTransitionFunctions(*line_transitions)]
+                self.seat_line.transitions.append(ParallellTransitionFunctions(*line_transitions))
+            if self.color_background != bg_color:
+                self.seat_line.transitions.append(ColorTransitionFunction(from_color=self.color_background, to_color=bg_color, easing=self.ease_fade(0, 1, self.ease_fade_duration), callback=self.set_color_normal))
+
+        while self.animate():
+            pass

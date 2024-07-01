@@ -26,9 +26,6 @@ class ViewPlayground(View):
     def animate(self):
         return self.animation.animate()
 
-    def show_error(self, exception):
-        self.switch_to_error()
-
     def set_connection_progress_text(self, text):
         self.switch_to_trying_to_connect()
 

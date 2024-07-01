@@ -8,9 +8,10 @@ class View():
 
     def animate(self) -> bool:
         "Return true of the animation is busy. Returns false if the animation is static."
-        return True
+        return False
     def show_error(self, exception):
-        pass
+        log.exception(exception)
+        self.switch_to_error()
     def set_connection_progress_text(self, text):
         pass
     def switch_to_playing(self, state: GameState, old_state: GameState):

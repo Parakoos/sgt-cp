@@ -9,7 +9,7 @@ class ViewMulti(View):
     def animate(self):
         busy_animating = False
         for view in self.views:
-            busy_animating = view.animate() and busy_animating
+            busy_animating = view.animate() or busy_animating
         return busy_animating
 
     def show_error(self, exception):

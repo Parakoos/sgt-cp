@@ -88,7 +88,6 @@ class GameState():
                 ('sgtTurnTime', 'turnTime'),
                 ('sgtState', 'state'),
                 ('sgtName', 'name'),
-                ('sgtSeat', 'seat'),
                 ('sgtPlayerTime', 'playerTime'),
                 ('sgtTotalPlayTime', 'totalPlayTime'),
                 ('sgtActionAdmin', 'actionAdmin'),
@@ -106,6 +105,10 @@ class GameState():
             for (sgt_name, state_name) in simple_mappings:
                 if sgt_name in ble_field_order:
                     state[state_name] = values[ble_field_order.index(sgt_name)]
+
+            if 'sgtSeat' in ble_field_order:
+                val = values[ble_field_order.index('sgtSeat')]
+                state['seat'] = json.loads(f"[{val}]")
 
             players = None
             sgtPlayerActions = values[ble_field_order.index('sgtPlayerActions')].split(',') if 'sgtPlayerActions' in ble_field_order else None
@@ -184,7 +187,7 @@ class GameState():
         if len(self.seat) == 1:
             return next((p for p in self.players if p.seat in self.seat))
         elif len(self.seat) == 0:
-            return find_thing((p for p in self.players if p.action == 'pr'), None)
+            return find_thing((p for p in self.players if p.action == 'pr' or p.action == 'se'), None)
         else:
             return None
 

@@ -26,7 +26,7 @@ EASE_LINE_PIXEL_PER_SEC = 5         # How was the active player line moves (aver
 BLE_DEVICE_NAME = "Hex Table (Playground)"
 BLUETOOTH_FIELD_DIVIDER = ';'
 # BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtGameStateVersion','sgtName','sgtSeat','sgtTs','sgtPlayerSeats','sgtPlayerColors','sgtPlayerNames','sgtPlayerActions','sgtActionPrimary','sgtActionInactive','sgtActionSecondary','sgtActionAdmin','sgtActionPause','sgtActionUndo']
-BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtPlayerSeats','sgtPlayerColors','sgtPlayerActions']
+BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtPlayerSeats','sgtPlayerColors','sgtPlayerActions','sgtSeat']
 suggestions = {
     "script": [
         f'0 %0A{BLUETOOTH_FIELD_DIVIDER.join(BLUETOOTH_FIELD_ORDER)}%0A'
@@ -172,5 +172,5 @@ while True:
         if is_polling:
             time.sleep(1) # Simulate delay in checking connection
             sgt_connection.poll()
-        accelerometer.loop()
-        orientation.loop()
+        # accelerometer.loop()
+        # orientation.loop()
