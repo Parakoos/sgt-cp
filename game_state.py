@@ -227,3 +227,22 @@ class GameState():
         if (self.players):
             facts.append(f'players={self.players}')
         return f"<SGT State: {', '.join(facts)}>"
+
+    def make_copy(self):
+        copy = GameState()
+        copy.timestamp = self.timestamp
+        copy.game_state_version = self.game_state_version
+        copy.timer_mode = self.timer_mode
+        copy.state = self.state
+        copy.turn_time_sec = self.turn_time_sec
+        copy.player_time_sec = self.player_time_sec
+        copy.total_play_time_sec = self.total_play_time_sec
+        copy.name = self.name
+        copy.color = self.color
+        copy.action_primary = self.action_primary
+        copy.action_secondary = self.action_secondary
+        copy.action_admin = self.action_admin
+        copy.action_pause = self.action_pause
+        copy.players = self.players
+        copy.seat = self.seat
+        return copy

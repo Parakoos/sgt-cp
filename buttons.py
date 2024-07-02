@@ -13,6 +13,9 @@ class _ButtonData():
         self.pressed_ts: None | int = None
         self.released_ts: None | int = None
 
+    def __repr__(self) -> str:
+        return f"ButtonData<Pin={self.pin}, #{self.presses} from {self.pressed_ts} to {self.released_ts}>"
+
 class Buttons():
     def __init__(self,
                  pins: dict[Pin, bool],
@@ -59,11 +62,11 @@ class Buttons():
                 if event.released and pin in self.pressed_pins:
                     self.pressed_pins.remove(pin)
 
-                if pin not in self.pressed_keys:
+                if event.pressed and pin not in self.pressed_keys:
                     data = _ButtonData(event.key_number, pin)
                     self.pressed_keys[pin] = data
 
-                if event.released and self.pressed_keys[pin].pressed_ts != None:
+                if event.released and pin in self.pressed_keys and self.pressed_keys[pin].pressed_ts != None:
                     self.pressed_keys[pin].released_ts = event.timestamp
                     log.debug(f"Key released. Pin: {self.pressed_keys[pin].pin}, Presses: {self.pressed_keys[pin].presses}, TS: {self.pressed_keys[pin].released_ts}")
                 elif event.pressed:

@@ -89,6 +89,13 @@ class SgtConnectionMQTT(SgtConnection):
         log.debug('MQTT Publish to %s value %s', self.mqtt_topic_command, action)
         self.mqtt_client.publish(self.mqtt_topic_command, action)
         timeout = time.monotonic() + 4
+
+        new_game_state = self.predict_next_game_state(value)
+        if new_game_state:
+            self.view.set_state(new_game_state)
+            while self.view.animate():
+                pass
+
         while self.view.state.game_state_version == gameStateVersion and time.monotonic() < timeout:
             log.debug('force polling')
             self.poll()

@@ -130,19 +130,23 @@ for btn_pin in BUTTON_PINS:
     button_pin_to_val_when_pressed[btn_pin] = True
 buttons = Buttons(button_pin_to_val_when_pressed)
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+    def on_success():
+        arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
+        tone.success()
+
     if long_press:
         if presses == 1:
-            sgt_connection.send_toggle_admin(on_success=tone.success, on_failure=tone.error)
+            sgt_connection.send_toggle_admin(on_success=on_success, on_failure=tone.error)
         elif presses == 2:
-            sgt_connection.send_toggle_pause(on_success=tone.success, on_failure=tone.error)
+            sgt_connection.send_toggle_pause(on_success=on_success, on_failure=tone.error)
         elif presses == 3:
-            sgt_connection.send_undo(on_success=tone.success, on_failure=tone.error)
+            sgt_connection.send_undo(on_success=on_success, on_failure=tone.error)
     else:
         seat = BUTTON_PINS.index(btn_pin) + 1
         if presses == 1:
-            sgt_connection.send_primary(seat=seat, on_success=tone.success, on_failure=tone.error)
+            sgt_connection.send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
         elif presses == 2:
-            sgt_connection.send_secondary(seat=seat, on_success=tone.success, on_failure=tone.error)
+            sgt_connection.send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
 
 for btn_pin in BUTTON_PINS:
     buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
@@ -150,7 +154,7 @@ for btn_pin in BUTTON_PINS:
     buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
     buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
     buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
-# buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=tone.success))
+# buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=on_success))
 buttons.set_fallback(tone.cascade)
 
 is_polling = None
@@ -168,6 +172,12 @@ while True:
             log.debug('======== ENABLE POLLING ========')
         if not interruptable and is_polling == True:
             log.debug('======== DISABLE POLLING ========')
+            if busy_animating and busy_pressing_buttons:
+                log.debug('======== Animating and Pressing Buttons ========')
+            elif busy_animating:
+                log.debug('======== Animating ========')
+            elif busy_pressing_buttons:
+                log.debug('======== Pressing Buttons ========')
         is_polling = interruptable
         if is_polling:
             time.sleep(1) # Simulate delay in checking connection

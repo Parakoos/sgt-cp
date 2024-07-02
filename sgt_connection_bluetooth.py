@@ -106,6 +106,12 @@ class SgtConnectionBluetooth(SgtConnection):
         log.info("-> %s", value)
         self.uart.write((value+"\n").encode("utf-8"))
 
+        new_game_state = self.predict_next_game_state(value)
+        if new_game_state:
+            self.view.set_state(new_game_state)
+            while self.view.animate():
+                pass
+
     def send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
         action = super().send_primary(seat, on_success, on_failure)
         if action != None and seat != None:

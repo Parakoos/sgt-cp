@@ -44,7 +44,7 @@ class SgtConnection:
         else:
             return _failure(on_failure)
     def send_toggle_admin(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-        if self.view.state.state in ('pl, ad'):
+        if self.view.state.state in ('pl', 'ad', 'si'):
             return _success('ToggleAdmin', on_success)
         else:
             return _failure(on_failure)
@@ -78,3 +78,22 @@ class SgtConnection:
             return _failure(on_failure)
         else:
             return _success('Undo', on_success)
+
+    def predict_next_game_state(self, command: str):
+        if command == 'ToggleAdmin':
+            if self.view.state.state in ('pl', 'si'):
+                new_state = self.view.state.make_copy()
+                new_state.name
+                new_state.state = 'ad'
+                return new_state
+            elif self.view.state.state == 'ad':
+                for player in self.view.state.players:
+                    if player.action == 'in':
+                        new_state = self.view.state.make_copy()
+                        new_state.state = 'si'
+                        return new_state
+                    elif player.action != None:
+                        new_state = self.view.state.make_copy()
+                        new_state.state = 'pl'
+                        return new_state
+        return None

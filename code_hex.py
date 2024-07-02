@@ -91,19 +91,22 @@ for btn_pin in BUTTON_PINS:
     button_pin_to_val_when_pressed[btn_pin] = BUTTON_VAL_WHEN_PRESSED
 buttons = Buttons(button_pin_to_val_when_pressed)
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+    def on_success():
+        arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
+
     if long_press:
         if presses == 1:
-            sgt_connection.send_toggle_admin()
+            sgt_connection.send_toggle_admin(on_success=on_success)
         elif presses == 2:
-            sgt_connection.send_toggle_pause()
+            sgt_connection.send_toggle_pause(on_success=on_success)
         elif presses == 3:
-            sgt_connection.send_undo()
+            sgt_connection.send_undo(on_success=on_success)
     else:
         seat = BUTTON_PINS.index(btn_pin) + 1
         if presses == 1:
-            sgt_connection.send_primary(seat=seat)
+            sgt_connection.send_primary(seat=seat, on_success=on_success)
         elif presses == 2:
-            sgt_connection.send_secondary(seat=seat)
+            sgt_connection.send_secondary(seat=seat, on_success=on_success)
 
 for btn_pin in BUTTON_PINS:
     buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
