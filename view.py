@@ -1,6 +1,6 @@
 import adafruit_logging as logging
 log = logging.getLogger()
-from game_state import GameState
+from game_state import GameState, STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED, STATE_RUNNING, STATE_NOT_RUNNING, STATE_SIM_TURN
 from utils import log_exception, check_if_crossed_time_border
 from time import monotonic
 
@@ -14,7 +14,7 @@ class View():
 
     def animate(self) -> bool:
         "Return true of the animation is busy. Returns false if the animation is static."
-        if self.enable_time_reminder_check and self.state and self.state.time_reminders and self.state.state in (GameState.STATE_PLAYING, GameState.STATE_SIM_TURN) and monotonic() >= self.time_reminder_check_timeout:
+        if self.enable_time_reminder_check and self.state and self.state.time_reminders and self.state.state in (STATE_PLAYING, STATE_SIM_TURN) and monotonic() >= self.time_reminder_check_timeout:
             # We have time reminders set, and we are close to performing one of its border crossings.
             # We should return True from here to mark this view as busy.
             current_times = self.state.get_current_timings()
@@ -85,23 +85,23 @@ class View():
         if self.state == None:
             self.switch_to_no_game()
         elif old_state == None or self.state.state != old_state.state:
-            if state.state == GameState.STATE_PLAYING:
+            if state.state == STATE_PLAYING:
                 self.switch_to_playing(state, old_state)
-            elif state.state == GameState.STATE_SIM_TURN:
+            elif state.state == STATE_SIM_TURN:
                 self.switch_to_simultaneous_turn(state, old_state)
-            elif state.state == GameState.STATE_ADMIN:
+            elif state.state == STATE_ADMIN:
                 self.switch_to_admin_time(state, old_state)
-            elif state.state == GameState.STATE_PAUSE:
+            elif state.state == STATE_PAUSE:
                 self.switch_to_paused(state, old_state)
-            elif state.state == GameState.STATE_FINISHED:
+            elif state.state == STATE_FINISHED:
                 self.switch_to_end(state, old_state)
-            elif state.state == GameState.STATE_START:
+            elif state.state == STATE_START:
                 self.switch_to_start(state, old_state)
-            elif state.state == GameState.STATE_RUNNING:
+            elif state.state == STATE_RUNNING:
                 self.switch_to_sandtimer_running(state, old_state)
-            elif state.state == GameState.STATE_NOT_RUNNING:
+            elif state.state == STATE_NOT_RUNNING:
                 self.switch_to_sandtimer_not_running(state, old_state)
-            elif state.state == GameState.STATE_NOT_CONNECTED:
+            elif state.state == STATE_NOT_CONNECTED:
                 self.switch_to_not_connected
             else:
                 raise Exception(f'Unknown state: {state.state}')

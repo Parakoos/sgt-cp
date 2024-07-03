@@ -1,4 +1,4 @@
-from game_state import GameState
+from game_state import TIMER_MODE_NO_TIMER, STATE_NOT_RUNNING, STATE_RUNNING
 from view import View
 from adafruit_circuitplayground import cp
 from neopixel import NeoPixel
@@ -30,7 +30,7 @@ class ViewPlayground(View):
         self.switch_to_trying_to_connect()
 
     def switch_to_playing(self):
-        if self.state.timer_mode == GameState.TIMER_MODE_NO_TIMER:
+        if self.state.timer_mode == TIMER_MODE_NO_TIMER:
             self.animation = Pulse(self.pixels, speed=0.01, color=self.state.color, period=0.5)
         else:
             self.animation = PlayingAnimation(self)
@@ -101,12 +101,12 @@ class SandtimerAnimation():
 
     def animate(self):
         PIXEL_COUNT = len(self.view.pixels)
-        time_added_by_monotonic = 0 if self.view.state.state == GameState.STATE_NOT_RUNNING else monotonic() - self.state.update_ts
+        time_added_by_monotonic = 0 if self.view.state.state == STATE_NOT_RUNNING else monotonic() - self.state.update_ts
         turn_time = self.view.state.turn_time_sec + time_added_by_monotonic
         remaining_time = max(self.view.state.player_time_sec - turn_time, 0)
 
         if (remaining_time == 0):
-            if not self.out_of_time_shown or self.view.state.state == GameState.STATE_RUNNING:
+            if not self.out_of_time_shown or self.view.state.state == STATE_RUNNING:
                 self.out_of_time_animation.animate()
             if not self.out_of_time_shown:
                 cp.play_tone(262, 0.5)
@@ -131,7 +131,7 @@ class SandtimerAnimation():
                 self.view.pixels[n] = color_current_pixel
 
             self.view.pixels[n+1:10] = [SAND_COLOR_TIME_USED] * (9-n)
-            if self.view.state.state == GameState.STATE_NOT_RUNNING:
+            if self.view.state.state == STATE_NOT_RUNNING:
                 for i in range(0, PIXEL_COUNT):
                     self.view.pixels[i] = self.pulsate_color(self.view.pixels[i])
             self.view.pixels.show()

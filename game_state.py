@@ -64,22 +64,23 @@ class CurrentTimes():
     def __repr__(self):
         return f'CurrentTimes<turn={self.turn_time}, player={self.player_time}, total={self.total_play_time}>'
 
-class GameState():
-    # Constants
-    STATE_PLAYING = 'pl'
-    STATE_ADMIN = 'ad'
-    STATE_PAUSE = 'pa'
-    STATE_START = 'st'
-    STATE_FINISHED = 'en'
-    STATE_NOT_CONNECTED = 'nc'
-    STATE_RUNNING = 'ru'
-    STATE_NOT_RUNNING = 'nr'
-    STATE_SIM_TURN = 'si'
+# Constants
+STATE_PLAYING = 'pl'
+STATE_ADMIN = 'ad'
+STATE_PAUSE = 'pa'
+STATE_START = 'st'
+STATE_FINISHED = 'en'
+STATE_NOT_CONNECTED = 'nc'
+STATE_RUNNING = 'ru'
+STATE_NOT_RUNNING = 'nr'
+STATE_SIM_TURN = 'si'
 
-    TIMER_MODE_COUNT_UP = 'cu'
-    TIMER_MODE_COUNT_DOWN = 'cd'
-    TIMER_MODE_SAND_TIMER = 'st'
-    TIMER_MODE_NO_TIMER = 'nt'
+TIMER_MODE_COUNT_UP = 'cu'
+TIMER_MODE_COUNT_DOWN = 'cd'
+TIMER_MODE_SAND_TIMER = 'st'
+TIMER_MODE_NO_TIMER = 'nt'
+
+class GameState():
 
     def __init__(self,
                  ble_state_string: str = None, ble_field_order: list[str] = None, ble_field_divider: str = None,
@@ -160,12 +161,12 @@ class GameState():
         self.game_state_version = get_state_int(state, 'gameStateVersion', -1)
 
         # Current timer-mode (cd/cu/st/nt for Count-Down/Up, SandTimer, No Timer)
-        self.timer_mode = get_state_string(state, 'timerMode', GameState.TIMER_MODE_COUNT_UP)
+        self.timer_mode = get_state_string(state, 'timerMode', TIMER_MODE_COUNT_UP)
 
         # The current state.
         # Sand, ru/nr/pa/en for running, not running, paused or end
         # Not Sand, st/en/pa/ad/pl for start, end, pause, admin or playing
-        self.state = get_state_string(state, 'state', GameState.STATE_NOT_CONNECTED)
+        self.state = get_state_string(state, 'state', STATE_NOT_CONNECTED)
 
         # Count-Up, time taken this turn or pause time or admin time
         # Count-Down, same as above, but negative values during Delay Time
@@ -245,37 +246,37 @@ class GameState():
         total_play_time = self.total_play_time_sec
 
         time_added_by_monotonic = now - self.timestamp
-        if self.timer_mode == GameState.TIMER_MODE_COUNT_UP or self.timer_mode == GameState.TIMER_MODE_NO_TIMER:
-            if self.state in [GameState.STATE_PLAYING, GameState.STATE_ADMIN, GameState.STATE_PAUSE, GameState.STATE_SIM_TURN]:
+        if self.timer_mode == TIMER_MODE_COUNT_UP or self.timer_mode == TIMER_MODE_NO_TIMER:
+            if self.state in [STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_SIM_TURN]:
                 turn_time = self.turn_time_sec + time_added_by_monotonic
-                if self.state == GameState.STATE_PLAYING:
+                if self.state == STATE_PLAYING:
                     player_time = time_added_by_monotonic + self.player_time_sec
                     total_play_time = (time_added_by_monotonic + self.total_play_time_sec)
-            elif self.state in [GameState.STATE_START, GameState.STATE_FINISHED, GameState.STATE_NOT_CONNECTED]:
+            elif self.state in [STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED]:
                 pass
             else:
                 raise Exception(f'Unknown state: {self.state}')
 
-        elif self.timer_mode == GameState.TIMER_MODE_COUNT_DOWN:
-            if self.state in [GameState.STATE_PLAYING, GameState.STATE_ADMIN, GameState.STATE_PAUSE, GameState.STATE_SIM_TURN]:
+        elif self.timer_mode == TIMER_MODE_COUNT_DOWN:
+            if self.state in [STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_SIM_TURN]:
                 turn_time = self.turn_time_sec + time_added_by_monotonic
-                if self.state == GameState.STATE_PLAYING:
+                if self.state == STATE_PLAYING:
                     player_time = self.player_time_sec
                     if (self.turn_time_sec < 0):
                         player_time -= max(0, time_added_by_monotonic + self.turn_time_sec)
                     else:
                         player_time -= time_added_by_monotonic
-            elif self.state in [GameState.STATE_START, GameState.STATE_FINISHED, GameState.STATE_NOT_CONNECTED]:
+            elif self.state in [STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED]:
                 pass
             else:
                 raise Exception(f"Unknown state: {self.state}")
 
-        elif self.timer_mode == GameState.TIMER_MODE_SAND_TIMER:
-            if self.state == GameState.STATE_RUNNING:
+        elif self.timer_mode == TIMER_MODE_SAND_TIMER:
+            if self.state == STATE_RUNNING:
                 turn_time = self.turn_time_sec + time_added_by_monotonic
-            elif self.state == GameState.STATE_PAUSE:
+            elif self.state == STATE_PAUSE:
                 turn_time = self.turn_time_sec + time_added_by_monotonic
-            elif self.state in [self.state == GameState.STATE_NOT_RUNNING, GameState.STATE_FINISHED, GameState.STATE_NOT_CONNECTED]:
+            elif self.state in [self.state == STATE_NOT_RUNNING, STATE_FINISHED, STATE_NOT_CONNECTED]:
                 pass
             else:
                 raise Exception(f'Unkown state: {self.state}')

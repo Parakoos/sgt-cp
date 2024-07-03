@@ -58,10 +58,10 @@ class SgtConnectionMQTT(SgtConnection):
             self.view.set_connection_progress_text(f"Connecting to WIFI ({self.wifi_ssid})")
             radio.connect(self.wifi_ssid, self.wifi_password)
             log.info(radio.ap_info)
-            self.lookup_unix_time_offset()
 
     def connect(self) -> bool:
         self.ensure_connected_to_wifi()
+        self.lookup_unix_time_offset()
         self.view.set_connection_progress_text(f"Connecting to MQTT")
         self.mqtt_client.connect()
 
@@ -110,6 +110,9 @@ class SgtConnectionMQTT(SgtConnection):
         self.view.record_polling_delay(time.monotonic() - start_ts)
 
     def lookup_unix_time_offset(self):
+        if self.unix_time_offset != 0:
+            log.debug(f'Unix time already set to {self.unix_time_offset:,}')
+            return
         log.info(' ============================= LOOK UP UNIX TIME ==========================================')
         self.view.set_connection_progress_text('Getting current time')
         requests = Session(pool, ssl_context)
