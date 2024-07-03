@@ -26,6 +26,7 @@ class SgtConnectionMQTT(SgtConnection):
                  mqtt_topic_command: str,
                  wifi_ssid: str,
                  wifi_password: str,
+                 manual_time_offset: int,
                  ):
         super().__init__(view)
         self.mqtt_topic_game = mqtt_topic_game
@@ -34,6 +35,7 @@ class SgtConnectionMQTT(SgtConnection):
         self.wifi_password = wifi_password
         self.last_poll_ts = -1000
         self.unix_time_offset = 0
+        self.manual_time_offset = manual_time_offset
         self.mqtt_client = ADA_MQTT(
             broker=mqtt_host,
             port=mqtt_port,
@@ -103,9 +105,12 @@ class SgtConnectionMQTT(SgtConnection):
     def poll(self):
         if not self.mqtt_client.is_connected():
             self.connect()
+        start_ts = time.monotonic()
         self.mqtt_client.loop(1)
+        self.view.record_polling_delay(time.monotonic() - start_ts)
 
     def lookup_unix_time_offset(self):
+        log.info(' ============================= LOOK UP UNIX TIME ==========================================')
         self.view.set_connection_progress_text('Getting current time')
         requests = Session(pool, ssl_context)
         response = requests.get('http://worldtimeapi.org/api/timezone/Etc/UTC')
@@ -114,7 +119,7 @@ class SgtConnectionMQTT(SgtConnection):
         time_unix_sec = json['unixtime']
         diff = now - time_unix_sec
         log.info(f"Current Unix Time: {time_unix_sec} at mono {now} (diff: {diff})")
-        self.unix_time_offset = diff
+        self.unix_time_offset = diff + self.manual_time_offset
 
     def send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
         self.send(super().send_primary(seat, on_success, on_failure), seat=seat)

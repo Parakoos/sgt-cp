@@ -117,6 +117,9 @@ class SerialTransitionFunctions():
 		self.fns.append(fn)
 
 def check_if_crossed_time_border(time_borders: tuple[int], time_lower_bound: int, time_upper_bound: int):
+	"""Checks if we have just crossed a time border.
+	:returns: a positive integer if we have just crossed a border, showing how many borders we have crossed, or a non-positive integer showing how many seconds are left until the next border crossing
+	"""
 	i = 0
 	n = 0
 	border = 0
@@ -126,11 +129,10 @@ def check_if_crossed_time_border(time_borders: tuple[int], time_lower_bound: int
 		if (time_lower_bound < border):
 			# We have found the latest boundary where we cross over with the new time.
 			if (time_upper_bound >= border):
-				log.debug('Border Crossed: n=%s, border=%s, upper=%s, lower=%s', n, time_borders, time_upper_bound, time_lower_bound)
 				return n
 			else:
 				# do nothing as we haven't just crossed the boundary.
-				return False
+				return time_upper_bound - border
 
 		# Only advance the index if we are not at the last value
 		if i < len(time_borders) - 1:

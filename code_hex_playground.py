@@ -190,6 +190,7 @@ while True:
         if is_polling:
             time.sleep(1) # Simulate delay in checking connection
             sgt_connection.poll()
+            view.record_polling_delay(1)
         # accelerometer.loop()
         # orientation.loop()
         if time.monotonic() - mem_ts > 10:

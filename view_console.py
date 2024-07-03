@@ -9,30 +9,32 @@ class ViewConsole(View):
         super().__init__()
 
     def show_error(self, exception):
-        print(f"ERROR: {exception}")
+        log.info(f"ERROR: {exception}")
     def set_connection_progress_text(self, text):
-        print(f"Connection Progress: {text}")
+        log.info(f"Connection Progress: {text}")
     def switch_to_playing(self, state: GameState, old_state: GameState):
-        print(f"-> Playing")
+        log.info(f"-> Playing")
     def switch_to_simultaneous_turn(self, state: GameState, old_state: GameState):
-        print(f"-> Simultaneous Turn")
+        log.info(f"-> Simultaneous Turn")
     def switch_to_admin_time(self, state: GameState, old_state: GameState):
-        print(f"-> Admin Time")
+        log.info(f"-> Admin Time")
     def switch_to_paused(self, state: GameState, old_state: GameState):
-        print(f"-> Paused")
+        log.info(f"-> Paused")
     def switch_to_sandtimer_running(self, state: GameState, old_state: GameState):
-        print(f"-> Sand Timer (Running)")
+        log.info(f"-> Sand Timer (Running)")
     def switch_to_sandtimer_not_running(self, state: GameState, old_state: GameState):
-        print(f"-> Sand Timer (Stopped)")
+        log.info(f"-> Sand Timer (Stopped)")
     def switch_to_start(self, state: GameState, old_state: GameState):
-        print(f"-> Setup")
+        log.info(f"-> Setup")
     def switch_to_end(self, state: GameState, old_state: GameState):
-        print(f"-> Game Over")
+        log.info(f"-> Game Over")
     def switch_to_no_game(self):
-        print(f"-> No Game In Progress")
+        log.info(f"-> No Game In Progress")
     def switch_to_not_connected(self):
-        print(f"-> Not Connecting")
+        log.info(f"-> Not Connecting")
     def switch_to_error(self):
-        print(f"-> Error")
+        log.info(f"-> Error")
     def on_state_update(self, state: GameState, old_state: GameState):
-        print(state, state.get_current_timings())
+        log.info("State: %s\nTimings: %s", state, state.get_current_timings())
+    def on_time_reminder(self, time_reminder_count: int):
+        log.info(f"-> Time Reminder Triggered. Count: {time_reminder_count}")

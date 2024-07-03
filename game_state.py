@@ -2,10 +2,7 @@ import adafruit_logging as logging
 log = logging.getLogger()
 import json
 import time
-from utils import find_thing
-
-def get_state_float(state, key, default=0):
-    return float(state[key]) if key in state and state[key] != None and state[key] != "" else default
+from utils import find_thing, log_exception
 
 def get_state_int(state, key, default=0):
     return int(state[key]) if key in state and state[key] != None and state[key] != "" else default
@@ -94,8 +91,7 @@ class GameState():
                 state = json.loads(json_state_string)
             except Exception as e:
                 print(json_state_string)
-                log.exception(e)
-                raise e
+                log_exception(e)
         elif ble_state_string != None and ble_field_order != None and ble_field_divider != None:
             values = ble_state_string.split(ble_field_divider)
             if len(values) != len(ble_field_order):
@@ -157,7 +153,7 @@ class GameState():
                         players[index]['seat'] = val
                 state['players'] = players
         # When was this state sent? (in monotonic space)
-        ts = get_state_float(state, 'ts', 0)
+        ts = get_state_int(state, 'ts', 0)
         self.timestamp = ts + timestamp_offset
 
         # The last version of the state, used to prevent doing actions against old states. Must be sent with each command.

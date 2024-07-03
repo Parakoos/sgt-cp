@@ -33,6 +33,7 @@ MQTT_TOPIC_GAME = SGT_USER_ID + "/game"
 MQTT_TOPIC_COMMAND = SGT_USER_ID + "/commands"
 MQTT_USERNAME = "tester"
 MQTT_PASSWORD = "1 Meeple"
+MANUAL_TIME_OFFSET = -2              # Time offset in seconds to improve syncing between SGT and the MCU
 
 # =============== End of Settings ================ #
 
@@ -81,6 +82,7 @@ sgt_connection = SgtConnectionMQTT(view,
                  mqtt_topic_command=MQTT_TOPIC_COMMAND,
                  wifi_ssid=WIFI_SSID,
                  wifi_password=WIFI_PASSWORD,
+                 manual_time_offset=MANUAL_TIME_OFFSET,
 )
 
 # ---------- BUTTONS SETUP -------------#

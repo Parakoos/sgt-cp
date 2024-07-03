@@ -5,7 +5,7 @@ from easing import EasingBase
 from adafruit_led_animation.animation.rainbowcomet import RainbowComet
 from adafruit_led_animation.animation.comet import Comet
 from sgt_animation import SgtAnimation, SgtSolid
-from utils import find_thing, set_brightness, check_if_crossed_time_border, TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions
+from utils import find_thing, set_brightness, TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions
 from math import ceil
 import adafruit_logging as logging
 log = logging.getLogger()
@@ -46,8 +46,10 @@ class ViewTableOutline(View):
         self.ease_line = ease_line
         self.ease_line_pixels_per_seconds = ease_line_pixels_per_seconds
         self.switch_to_not_connected()
-    def animate(self):
-        return self.animation.animate()
+    def animate(self) -> bool:
+        shared_stuff_busy = super().animate()
+        this_animation_busy = self.animation.animate()
+        return this_animation_busy or shared_stuff_busy
     def set_connection_progress_text(self, text):
         pass
     def switch_to_playing(self, state: GameState, old_state: GameState):
@@ -97,6 +99,9 @@ class ViewTableOutline(View):
     def _activate_singleplayer_animation(self):
         if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
             self.animation = SgtSeatedSingleplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration, self.ease_warn, self.ease_warn_duration, self.ease_warn_max_times, self.ease_line, self.ease_line_pixels_per_seconds)
+    def on_time_reminder(self, time_reminder_count: int):
+        if isinstance(self.animation, SgtSeatedAnimation):
+            self.animation.on_time_reminder(time_reminder_count)
 
 class Line():
     def __init__(self, midpoint: float, length: float, color: tuple[int, int, int]) -> None:
@@ -151,6 +156,9 @@ class SgtSeatedAnimation():
     def on_state_update(self, state: GameState, old_state: GameState):
         pass
 
+    def on_time_reminder(self, time_reminder_count: int):
+        pass
+
     def draw_line(self, line:Line):
         lower_bound = ceil(line.midpoint - (line.length/2))
         upper_bound = ceil(line.midpoint + (line.length/2))
@@ -188,18 +196,6 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
         pixels.brightness = saved_brightness
 
     def animate(self):
-        if self.state and self.state.state == GameState.STATE_SIM_TURN and self.state.time_reminders:
-            current_times = self.state.get_current_timings()
-            if self.current_times and self.current_times.turn_time != current_times.turn_time:
-                crossed_borders = check_if_crossed_time_border(self.state.time_reminders, self.current_times.turn_time, current_times.turn_time)
-                if crossed_borders:
-                    self.blinks_left = min(crossed_borders, self.ease_warn_max_times)
-                    self.blink_transition = None
-            self.current_times = current_times
-        else:
-            self.blinks_left = 0
-            self.blink_transition = None
-
         if self.blink_transition == None and self.blinks_left > 0:
             self.blinks_left = self.blinks_left - 1
             self.blink_transition = SerialTransitionFunctions([
@@ -228,7 +224,6 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
         self.seat_lines[seat].line.color = color
 
     def on_state_update(self, state: GameState, old_state: GameState):
-        self.state = state
         for seat, line in enumerate(self.seat_definitions):
             old_color = self.seat_lines[seat].line.color
             old_line_length = self.seat_lines[seat].line.length
@@ -267,6 +262,10 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
                 self.seat_lines[seat].transitions = [ParallellTransitionFunctions(*trannies)]
         while self.animate():
             pass
+
+    def on_time_reminder(self, time_reminder_count: int):
+        self.blinks_left = min(time_reminder_count, self.ease_warn_max_times)
+        self.blink_transition = None
 
 class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
     seat_line: LineTransition
@@ -312,18 +311,6 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
             self.pixels.show()
             return False
 
-        if self.state and self.state.state == GameState.STATE_PLAYING and self.state.time_reminders:
-            current_times = self.state.get_current_timings()
-            if self.current_times and self.current_times.turn_time != current_times.turn_time:
-                crossed_borders = check_if_crossed_time_border(self.state.time_reminders, self.current_times.turn_time, current_times.turn_time)
-                if crossed_borders:
-                    self.blinks_left = min(crossed_borders, self.ease_warn_max_times)
-                    self.blink_transition = None
-            self.current_times = current_times
-        else:
-            self.blinks_left = 0
-            self.blink_transition = None
-
         if self.blink_transition == None and self.blinks_left > 0:
             self.blinks_left = self.blinks_left - 1
             self.blink_transition = SerialTransitionFunctions([
@@ -350,7 +337,6 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
         self.seat_line.line.length = length
 
     def on_state_update(self, state: GameState, old_state: GameState):
-        self.state = state
         active_player = state.get_active_player()
 
         if active_player == None:
@@ -404,3 +390,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 
         while self.animate():
             pass
+
+    def on_time_reminder(self, time_reminder_count: int):
+        self.blinks_left = min(time_reminder_count, self.ease_warn_max_times)
+        self.blink_transition = None
