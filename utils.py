@@ -135,3 +135,9 @@ def check_if_crossed_time_border(time_borders: tuple[int], time_lower_bound: int
 		# Only advance the index if we are not at the last value
 		if i < len(time_borders) - 1:
 			i += 1
+
+def log_exception(e: any):
+	if isinstance(e, Exception):
+		from traceback import print_exception
+		print_exception(e)
+		log.error(e)

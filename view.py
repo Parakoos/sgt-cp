@@ -1,6 +1,7 @@
 import adafruit_logging as logging
 log = logging.getLogger()
 from game_state import GameState
+from utils import log_exception
 
 class View():
     def __init__(self):
@@ -10,7 +11,7 @@ class View():
         "Return true of the animation is busy. Returns false if the animation is static."
         return False
     def show_error(self, exception):
-        log.exception(exception)
+        log_exception(exception)
         self.switch_to_error()
     def set_connection_progress_text(self, text):
         pass
