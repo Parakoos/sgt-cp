@@ -3,7 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
-from easing import LinearInOut, BounceEaseOut
+from easing import LinearInOut, BounceEaseOut, CubicEaseInOut
 
 # =================== Settings =================== #
 PIXELS_PIN = board.IO43             # Pin of the neopixel strip
@@ -13,6 +13,9 @@ LED_BRIGHTNESS_NORMAL = 0.1         # 0-1. How bright do you want the LED?
 LED_BRIGHTNESS_HIGHLIGHT = 0.5      # When highlighting something, how bright should it be?
 EASE_FADE = LinearInOut             # Easing function for color fades
 EASE_FADE_DURATION = 0.8            # Duration of color fades
+EASE_WARN = (CubicEaseInOut, CubicEaseInOut) # Easing functions to and from a warning highlight, mostly during time reminders.
+EASE_WARN_DURATION = 0.5            # The duration of a warning
+EASE_WARN_MAX_TIMES = 5             # Maximum times a warning is shown in series
 EASE_LINE = BounceEaseOut           # Easing function for moving the active player line
 EASE_LINE_PIXEL_PER_SEC = 36        # How was the active player line moves (average)
 
@@ -63,6 +66,9 @@ view = ViewMulti([
           brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT,
           ease_fade=EASE_FADE,
           ease_fade_duration=EASE_FADE_DURATION,
+          ease_warn=EASE_WARN,
+          ease_warn_duration=EASE_WARN_DURATION,
+          ease_warn_max_times=EASE_WARN_MAX_TIMES,
           ease_line=EASE_LINE,
           ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
           ),

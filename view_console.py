@@ -35,4 +35,4 @@ class ViewConsole(View):
     def switch_to_error(self):
         print(f"-> Error")
     def on_state_update(self, state: GameState, old_state: GameState):
-        print(state)
+        print(state, state.get_current_timings())

@@ -3,7 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 from game_state import GameState
 from adafruit_circuitplayground import cp
-from easing import LinearInOut, BounceEaseInOut
+from easing import LinearInOut, BounceEaseInOut, CubicEaseInOut
 
 # =================== Settings =================== #
 SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
@@ -16,6 +16,9 @@ ORIENTATION_OFF_THRESHOLD = 4.0     # 0-10. Higher number, more sensitive.
 ORIENTATION_CHANGE_DELAY = 1        # How long to debounce changes in orientation
 EASE_FADE = LinearInOut             # Easing function for color fades
 EASE_FADE_DURATION = 0.5            # Duration of color fades
+EASE_WARN = (CubicEaseInOut, CubicEaseInOut) # Easing functions to and from a warning highlight, mostly during time reminders.
+EASE_WARN_DURATION = 0.5            # The duration of a warning
+EASE_WARN_MAX_TIMES = 5             # Maximum times a warning is shown in series
 EASE_LINE = BounceEaseInOut         # Easing function for moving the active player line
 EASE_LINE_PIXEL_PER_SEC = 5         # How was the active player line moves (average)
 # =============== End of Settings ================ #
@@ -26,7 +29,7 @@ EASE_LINE_PIXEL_PER_SEC = 5         # How was the active player line moves (aver
 BLE_DEVICE_NAME = "Hex Table (Playground)"
 BLUETOOTH_FIELD_DIVIDER = ';'
 # BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtGameStateVersion','sgtName','sgtSeat','sgtTs','sgtPlayerSeats','sgtPlayerColors','sgtPlayerNames','sgtPlayerActions','sgtActionPrimary','sgtActionInactive','sgtActionSecondary','sgtActionAdmin','sgtActionPause','sgtActionUndo']
-BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtPlayerSeats','sgtPlayerColors','sgtPlayerActions','sgtSeat']
+BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime', 'sgtTimeReminders','sgtPlayerSeats','sgtPlayerColors','sgtPlayerActions','sgtSeat']
 suggestions = {
     "script": [
         f'0 %0A{BLUETOOTH_FIELD_DIVIDER.join(BLUETOOTH_FIELD_ORDER)}%0A'
@@ -83,6 +86,9 @@ view = ViewMulti([
           brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT,
           ease_fade=EASE_FADE,
           ease_fade_duration=EASE_FADE_DURATION,
+          ease_warn=EASE_WARN,
+          ease_warn_duration=EASE_WARN_DURATION,
+          ease_warn_max_times=EASE_WARN_MAX_TIMES,
           ease_line=EASE_LINE,
           ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
           ),
@@ -158,6 +164,8 @@ for btn_pin in BUTTON_PINS:
 buttons.set_fallback(tone.cascade)
 
 is_polling = None
+import gc
+mem_ts = time.monotonic()
 # ---------- MAIN LOOP -------------#
 while True:
     if not sgt_connection.is_connected():
@@ -184,3 +192,7 @@ while True:
             sgt_connection.poll()
         # accelerometer.loop()
         # orientation.loop()
+        if time.monotonic() - mem_ts > 10:
+            unreachables = gc.collect()
+            log.debug('Free memory: %s, Unreachables: %s', gc.mem_free(), unreachables)
+            mem_ts = time.monotonic()

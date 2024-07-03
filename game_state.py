@@ -47,6 +47,26 @@ class Player():
         else:
             return f'Player<{self.seat}, {self.color} {self.name} action={self.action}>'
 
+class CurrentTimes():
+    def __init__(self, now: int, turn_time: float, player_time: float, total_play_time: float) -> None:
+        self.now = now
+
+        # Count-Up, time taken this turn or pause time or admin time
+        # Count-Down, same as above, but negative values during Delay Time
+        # Sand, time taken out of the sand timer
+        self.turn_time = round(turn_time)
+
+        # Count-Up, total time taken, or blank for admin/pause/sim. tur
+        # Count-Down, remaining time bank, or blank for admin/pause/sim. turn
+        # Sand, size (in sec) of the sand timer (it's reset size)
+        self.player_time = round(player_time)
+
+        # Count-Up/Down, total play time, not counting this turn and not admin/pause time
+        self.total_play_time = round(total_play_time)
+
+    def __repr__(self):
+        return f'CurrentTimes<turn={self.turn_time}, player={self.player_time}, total={self.total_play_time}>'
+
 class GameState():
     # Constants
     STATE_PLAYING = 'pl'
@@ -109,6 +129,11 @@ class GameState():
             if 'sgtSeat' in ble_field_order:
                 val = values[ble_field_order.index('sgtSeat')]
                 state['seat'] = json.loads(f"[{val}]")
+
+            if 'sgtTimeReminders' in ble_field_order:
+                val = values[ble_field_order.index('sgtTimeReminders')]
+                if len(val) > 0:
+                    state['timeReminders'] = json.loads(f"[{val}]")
 
             players = None
             sgtPlayerActions = values[ble_field_order.index('sgtPlayerActions')].split(',') if 'sgtPlayerActions' in ble_field_order else None
@@ -180,6 +205,14 @@ class GameState():
         else:
             self.seat = []
 
+        time_reminders_var = state['timeReminders'] if 'timeReminders' in state and state['timeReminders'] != None else None
+        if isinstance(time_reminders_var, list):
+            self.time_reminders = [int(tr) for tr in time_reminders_var]
+        else:
+            self.time_reminders = None
+
+        self.current_times = None
+
     def has_action(self, action):
         return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
@@ -193,6 +226,68 @@ class GameState():
 
     def get_player_by_seat(self, seat: int) -> Player | None:
         return find_thing((p for p in self.players if p.seat == seat), None)
+
+    def get_current_timings(self):
+        now = round(time.monotonic())
+        if isinstance(self.current_times, CurrentTimes) and (now - self.current_times.now) < 1:
+            return self.current_times
+
+        if self.timer_mode == None:
+            raise Exception(f'Unkown timer mode: {self.timer_mode}')
+
+        # Count-Up, time taken this turn or pause time or admin time
+        # Count-Down, same as above, but negative values during Delay Time
+        # Sand, time taken out of the sand timer
+        turn_time = self.turn_time_sec
+
+        # Count-Up, total time taken, or blank for admin/pause/sim. tur
+        # Count-Down, remaining time bank, or blank for admin/pause/sim. turn
+        # Sand, size (in sec) of the sand timer (it's reset size)
+        player_time = self.player_time_sec
+
+        # Count-Up/Down, total play time, not counting this turn and not admin/pause time
+        total_play_time = self.total_play_time_sec
+
+        time_added_by_monotonic = now - self.timestamp
+        if self.timer_mode == GameState.TIMER_MODE_COUNT_UP or self.timer_mode == GameState.TIMER_MODE_NO_TIMER:
+            if self.state in [GameState.STATE_PLAYING, GameState.STATE_ADMIN, GameState.STATE_PAUSE, GameState.STATE_SIM_TURN]:
+                turn_time = self.turn_time_sec + time_added_by_monotonic
+                if self.state == GameState.STATE_PLAYING:
+                    player_time = time_added_by_monotonic + self.player_time_sec
+                    total_play_time = (time_added_by_monotonic + self.total_play_time_sec)
+            elif self.state in [GameState.STATE_START, GameState.STATE_FINISHED, GameState.STATE_NOT_CONNECTED]:
+                pass
+            else:
+                raise Exception(f'Unknown state: {self.state}')
+
+        elif self.timer_mode == GameState.TIMER_MODE_COUNT_DOWN:
+            if self.state in [GameState.STATE_PLAYING, GameState.STATE_ADMIN, GameState.STATE_PAUSE, GameState.STATE_SIM_TURN]:
+                turn_time = self.turn_time_sec + time_added_by_monotonic
+                if self.state == GameState.STATE_PLAYING:
+                    player_time = self.player_time_sec
+                    if (self.turn_time_sec < 0):
+                        player_time -= max(0, time_added_by_monotonic + self.turn_time_sec)
+                    else:
+                        player_time -= time_added_by_monotonic
+            elif self.state in [GameState.STATE_START, GameState.STATE_FINISHED, GameState.STATE_NOT_CONNECTED]:
+                pass
+            else:
+                raise Exception(f"Unknown state: {self.state}")
+
+        elif self.timer_mode == GameState.TIMER_MODE_SAND_TIMER:
+            if self.state == GameState.STATE_RUNNING:
+                turn_time = self.turn_time_sec + time_added_by_monotonic
+            elif self.state == GameState.STATE_PAUSE:
+                turn_time = self.turn_time_sec + time_added_by_monotonic
+            elif self.state in [self.state == GameState.STATE_NOT_RUNNING, GameState.STATE_FINISHED, GameState.STATE_NOT_CONNECTED]:
+                pass
+            else:
+                raise Exception(f'Unkown state: {self.state}')
+        else:
+            raise Exception(f'Unkown timer mode: {self.timer_mode}')
+
+        self.current_times = CurrentTimes(now, turn_time, player_time, total_play_time)
+        return self.current_times
 
     def __repr__(self):
         facts = []
@@ -210,6 +305,8 @@ class GameState():
             facts.append(f'player_time={self.player_time_sec}')
         if (self.total_play_time_sec):
             facts.append(f'total_time={self.total_play_time_sec}')
+        if (self.time_reminders):
+            facts.append(f'time_reminders={self.time_reminders}')
         if (self.name):
             facts.append(f'name={self.name}')
         if (self.color):

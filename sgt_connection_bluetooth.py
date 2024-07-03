@@ -37,7 +37,7 @@ class SgtConnectionBluetooth(SgtConnection):
         if self.ble.connected and not self.last_is_connected_check:
             self.view.set_connection_progress_text('Connected')
             self.ble.stop_advertising()
-            timeout = time.monotonic() + 2
+            timeout = time.monotonic() + 3
             while time.monotonic() < timeout:
                 self.view.animate()
             self.send('Enable ACK')

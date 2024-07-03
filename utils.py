@@ -103,3 +103,35 @@ class ParallellTransitionFunctions():
 		for fn in self.fns:
 			is_done = fn.loop() and is_done
 		return is_done
+
+class SerialTransitionFunctions():
+	def __init__(self, fns: list[TransitionFunction]) -> None:
+		self.fns = fns
+
+	def loop(self):
+		if len(self.fns) > 0 and self.fns[0].loop():
+			self.fns = self.fns[1:]
+		return len(self.fns) == 0
+
+	def append(self, fn: TransitionFunction):
+		self.fns.append(fn)
+
+def check_if_crossed_time_border(time_borders: tuple[int], time_lower_bound: int, time_upper_bound: int):
+	i = 0
+	n = 0
+	border = 0
+	while True:
+		n = n + 1
+		border = border + time_borders[i]
+		if (time_lower_bound < border):
+			# We have found the latest boundary where we cross over with the new time.
+			if (time_upper_bound >= border):
+				log.debug('Border Crossed: n=%s, border=%s, upper=%s, lower=%s', n, time_borders, time_upper_bound, time_lower_bound)
+				return n
+			else:
+				# do nothing as we haven't just crossed the boundary.
+				return False
+
+		# Only advance the index if we are not at the last value
+		if i < len(time_borders) - 1:
+			i += 1
