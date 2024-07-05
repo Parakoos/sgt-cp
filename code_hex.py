@@ -124,21 +124,6 @@ for btn_pin in BUTTON_PINS:
     buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
 
 
-is_polling = None
 # ---------- MAIN LOOP -------------#
-while True:
-    if not sgt_connection.is_connected():
-          sgt_connection.connect()
-    while not sgt_connection.is_connected():
-          view.animate()
-    while sgt_connection.is_connected():
-        busy_animating = view.animate()
-        busy_pressing_buttons = buttons.loop()
-        interruptable = not(busy_animating or busy_pressing_buttons)
-        if interruptable and is_polling == False:
-            log.debug('======== ENABLE POLLING ========')
-        if not interruptable and is_polling == True:
-            log.debug('======== DISABLE POLLING ========')
-        is_polling = interruptable
-        if is_polling:
-            sgt_connection.poll()
+from loop import main_loop
+main_loop(sgt_connection, view, (buttons.loop))

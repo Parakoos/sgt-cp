@@ -45,7 +45,6 @@ class View():
             # We do not have time reminders, or we are comfortably far away from it, so we are not busy.
             return False
     def show_error(self, exception):
-        log_exception(exception)
         self.switch_to_error()
     def set_connection_progress_text(self, text):
         pass

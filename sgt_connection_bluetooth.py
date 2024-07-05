@@ -35,13 +35,24 @@ class SgtConnectionBluetooth(SgtConnection):
 
     def is_connected(self) -> bool:
         if self.ble.connected and not self.last_is_connected_check:
-            self.view.set_connection_progress_text('Connected')
+            self.view.set_connection_progress_text('Establishing Connection')
             self.ble.stop_advertising()
-            timeout = time.monotonic() + 3
-            while time.monotonic() < timeout:
+            # Wait for the first poll request to go through,
+            time_of_last_poll_request = 0
+            while self.ble.connected and self.uart.in_waiting == 0:
+                if time.monotonic() - time_of_last_poll_request > 0.5:
+                    time_of_last_poll_request = time.monotonic()
+                    log.debug('Waiting for ping')
+                    self.send('Ping')
                 self.view.animate()
-            self.send('Enable ACK')
-            self.send('Poll')
+            if self.ble.connected:
+                log.debug('Ping Acknowledged')
+                self.send('Enable ACK')
+                self.uart.reset_input_buffer()
+                self.send('Poll')
+            else:
+                raise Exception('Disconnected while waiting for ping')
+
         self.last_is_connected_check = self.ble.connected
         return self.ble.connected
 

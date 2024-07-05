@@ -1,6 +1,6 @@
 from view import View
 from game_state import GameState, Player
-from neopixel import NeoPixel
+from adafruit_pixelbuf import PixelBuf
 from easing import EasingBase
 from adafruit_led_animation.animation.rainbowcomet import RainbowComet
 from adafruit_led_animation.animation.comet import Comet
@@ -16,7 +16,7 @@ RED = (255,0,0)
 
 class ViewTableOutline(View):
     def __init__(self,
-            pixels: NeoPixel,
+            pixels: PixelBuf,
             seat_definitions: list[tuple[float, int]],
             brightness_normal: float,
             brightness_highlight: float,
@@ -84,7 +84,10 @@ class ViewTableOutline(View):
             (SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLACK, self.brightness_highlight)), 0.5, True),
         )
     def switch_to_not_connected(self):
-        self.animation = SgtAnimation((SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLUE, self.brightness_highlight)), None, True))
+        self.animation = SgtAnimation(
+            (Comet(self.pixels, self.refresh_rate, BLUE, tail_length=round(len(self.pixels)/0.5), bounce=True), 1, False),
+            (SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLACK, self.brightness_highlight)), 0.5, True),
+        )
     def switch_to_error(self):
         self.animation = SgtAnimation(
             (Comet(self.pixels, self.refresh_rate, RED, tail_length=round(len(self.pixels)/0.5), bounce=True), 1, False),
@@ -95,10 +98,10 @@ class ViewTableOutline(View):
             self.animation.on_state_update(state, old_state)
     def _activate_multiplayer_animation(self):
         if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
-            self.animation = SgtSeatedMultiplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration, self.ease_warn, self.ease_warn_duration, self.ease_warn_max_times)
+            self.animation = SgtSeatedMultiplayerAnimation(self)
     def _activate_singleplayer_animation(self):
         if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
-            self.animation = SgtSeatedSingleplayerAnimation(self.seat_definitions, self.pixels, self.brightness_normal, self.brightness_highlight, self.ease_fade, self.ease_fade_duration, self.ease_warn, self.ease_warn_duration, self.ease_warn_max_times, self.ease_line, self.ease_line_pixels_per_seconds)
+            self.animation = SgtSeatedSingleplayerAnimation(self)
     def on_time_reminder(self, time_reminder_count: int):
         if isinstance(self.animation, SgtSeatedAnimation):
             self.animation.on_time_reminder(time_reminder_count)
@@ -131,27 +134,30 @@ class LineTransition():
         return f"<LineTransition: {', '.join(facts)}>"
 
 class SgtSeatedAnimation():
-    def __init__(self,
-                 seat_definitions: list[tuple[int, int]],
-                 pixels: NeoPixel,
-                 brightness_normal: float,
-                 brightness_highlight: float,
-                 ease_fade: EasingBase,
-                 ease_fade_duration: float,
-                 ease_warn: tuple[EasingBase, EasingBase],
-                 ease_warn_duration: float,
-                 ease_warn_max_times: int,
-                 ):
-        self.pixels=pixels
-        self.seat_definitions = seat_definitions
-        self.brightness_normal = brightness_normal
-        self.brightness_highlight = brightness_highlight
+    def __init__(self, parent_view: ViewTableOutline):
+        self.parent = parent_view
+        self.pixels=parent_view.pixels
+        self.seat_definitions = parent_view.seat_definitions
+        self.brightness_normal = parent_view.brightness_normal
+        self.brightness_highlight = parent_view.brightness_highlight
         self.length = len(self.pixels)
-        self.ease_fade = ease_fade
-        self.ease_fade_duration = ease_fade_duration
-        self.ease_warn = ease_warn
-        self.ease_warn_duration = ease_warn_duration
-        self.ease_warn_max_times = ease_warn_max_times
+        self.ease_fade = parent_view.ease_fade
+        self.ease_fade_duration = parent_view.ease_fade_duration
+        self.ease_warn = parent_view.ease_warn
+        self.ease_warn_duration = parent_view.ease_warn_duration
+        self.ease_warn_max_times = parent_view.ease_warn_max_times
+
+        # Fade to black
+        def _set_brightness(brightness: float):
+            self.pixels.brightness = brightness
+            self.pixels.show()
+        saved_brightness = self.pixels.brightness
+        tranny = TransitionFunction(self.ease_fade(saved_brightness, 0, self.ease_fade_duration), _set_brightness)
+        while not tranny.loop():
+            pass
+        self.pixels.fill(BLACK)
+        self.pixels.show()
+        self.pixels.brightness = saved_brightness
 
     def on_state_update(self, state: GameState, old_state: GameState):
         pass
@@ -166,34 +172,13 @@ class SgtSeatedAnimation():
             self.pixels[n%self.length] = line.color
 
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
-    def __init__(self,
-                 seat_definitions: list[tuple[float, int]],
-                 pixels: NeoPixel,
-                 brightness_normal: float,
-                 brightness_highlight: float,
-                 ease_fade: EasingBase,
-                 ease_fade_duration: float,
-                 ease_warn: tuple[EasingBase, EasingBase],
-                 ease_warn_duration: float,
-                 ease_warn_max_times: int,
-                 ):
-        super().__init__(seat_definitions, pixels, brightness_normal, brightness_highlight, ease_fade, ease_fade_duration, ease_warn, ease_warn_duration, ease_warn_max_times)
-        self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK), transitions=[]) for s in seat_definitions)
+    def __init__(self, parent_view: ViewTableOutline):
+        super().__init__(parent_view)
+        self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK), transitions=[]) for s in self.seat_definitions)
         self.blinks_left = 0
         self.blink_transition = None
         self.current_times = None
         self.state = None
-
-        # Fade to black
-        def _set_brightness(brightness: float):
-            pixels.brightness = brightness
-            pixels.show()
-        saved_brightness = pixels.brightness
-        tranny = TransitionFunction(self.ease_fade(saved_brightness, 0, self.ease_fade_duration), _set_brightness)
-        while not tranny.loop():
-            pass
-        self.animate()
-        pixels.brightness = saved_brightness
 
     def animate(self):
         if self.blink_transition == None and self.blinks_left > 0:
@@ -272,38 +257,15 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
     color_background: tuple[int,int,int]
     blink_transition: SerialTransitionFunctions | None
 
-    def __init__(self,
-                 seat_definitions: list[tuple[int, int]],
-                 pixels: NeoPixel,
-                 brightness_normal: float,
-                 brightness_highlight: float,
-                 ease_fade: EasingBase,
-                 ease_fade_duration: float,
-                 ease_warn: tuple[EasingBase, EasingBase],
-                 ease_warn_duration: float,
-                 ease_warn_max_times: int,
-                 ease_line: EasingBase,
-                 ease_line_pixels_per_seconds: int,
-                ):
-        super().__init__(seat_definitions, pixels, brightness_normal, brightness_highlight, ease_fade, ease_fade_duration, ease_warn, ease_warn_duration, ease_warn_max_times)
+    def __init__(self, parent_view: ViewTableOutline):
+        super().__init__(parent_view)
         self.color_background = BLACK
         self.seat_line = None
-        self.ease_line = ease_line
-        self.ease_line_pixels_per_seconds = ease_line_pixels_per_seconds
+        self.ease_line = parent_view.ease_line
+        self.ease_line_pixels_per_seconds = parent_view.ease_line_pixels_per_seconds
         self.blinks_left = 0
         self.blink_transition = None
         self.current_times = None
-
-        # Fade to black
-        def _set_brightness(brightness: float):
-            pixels.brightness = brightness
-            pixels.show()
-        saved_brightness = pixels.brightness
-        tranny = TransitionFunction(self.ease_fade(saved_brightness, 0, self.ease_fade_duration), _set_brightness)
-        while not tranny.loop():
-            pass
-        self.animate()
-        pixels.brightness = saved_brightness
 
     def animate(self):
         if self.seat_line == None:

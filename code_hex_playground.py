@@ -2,7 +2,7 @@ import adafruit_logging as logging
 log = logging.getLogger()
 log.setLevel(10)
 from game_state import GameState
-from adafruit_circuitplayground import cp
+# from adafruit_circuitplayground import cp
 from easing import LinearInOut, BounceEaseInOut, CubicEaseInOut
 
 # =================== Settings =================== #
@@ -69,11 +69,11 @@ import time
 from view_multi import ViewMulti
 from view_console import ViewConsole
 from view_table_outline import ViewTableOutline
-from view_seated_action_leds import ViewSeatedActionLeds
-from pixel_as_digital_out import PixelAsDigitalOut
-cp.pixels.brightness = LED_BRIGHTNESS_NORMAL
+# from view_seated_action_leds import ViewSeatedActionLeds
+# from pixel_as_digital_out import PixelAsDigitalOut
+# cp.pixels.brightness = LED_BRIGHTNESS_NORMAL
 
-arcade_leds = [PixelAsDigitalOut(cp.pixels, s) for s in range(len(SEAT_DEFINITIONS))]
+# arcade_leds = [PixelAsDigitalOut(cp.pixels, s) for s in range(len(SEAT_DEFINITIONS))]
 
 from adafruit_dotstar import DotStar
 dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
@@ -92,13 +92,16 @@ view = ViewMulti([
           ease_line=EASE_LINE,
           ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
           ),
-     ViewSeatedActionLeds(arcade_leds),
+    #  ViewSeatedActionLeds(arcade_leds),
      ])
 view.set_state(GameState())
 
 # ---------- SOUNDS -------------#
-from tone_playground import TonePlayground
-tone = TonePlayground()
+# from tone_playground import TonePlayground
+# tone = TonePlayground()
+
+from tone import Tone
+tone = Tone()
 
 # ---------- BLUETOOTH SETUP -------------#
 from sgt_connection_bluetooth import SgtConnectionBluetooth
@@ -120,80 +123,49 @@ sgt_connection = SgtConnectionBluetooth(view,
                     on_error=poll_for_latest_state)
 
 # ---------- ACCELEROMETER / ORIENTATION SETUP -------------#
-from accelerometer_playground import Accelerometer_Playground
-accelerometer = Accelerometer_Playground(shake_threshold=SHAKE_THRESHOLD, double_shake_prevention_timeout=DOUBLE_SHAKE_PREVENTION_TIMEOUT)
-accelerometer.set_shake_callback(lambda: sgt_connection.send_undo(on_success=tone.shake))
-from orientation import Orientation, AXIS_Z, DIR_NEG
-orientation = Orientation(accelerometer, ORIENTATION_ON_THRESHOLD, ORIENTATION_OFF_THRESHOLD, ORIENTATION_CHANGE_DELAY)
-orientation.set_callback(AXIS_Z, DIR_NEG, lambda _: sgt_connection.send("To Face Down"), lambda _: sgt_connection.send("From Face Down"))
+# from accelerometer_playground import Accelerometer_Playground
+# accelerometer = Accelerometer_Playground(shake_threshold=SHAKE_THRESHOLD, double_shake_prevention_timeout=DOUBLE_SHAKE_PREVENTION_TIMEOUT)
+# accelerometer.set_shake_callback(lambda: sgt_connection.send_undo(on_success=tone.shake))
+# from orientation import Orientation, AXIS_Z, DIR_NEG
+# orientation = Orientation(accelerometer, ORIENTATION_ON_THRESHOLD, ORIENTATION_OFF_THRESHOLD, ORIENTATION_CHANGE_DELAY)
+# orientation.set_callback(AXIS_Z, DIR_NEG, lambda _: sgt_connection.send("To Face Down"), lambda _: sgt_connection.send("From Face Down"))
 
 # ---------- BUTTONS SETUP -------------#
-from buttons import Buttons
-from microcontroller import Pin
-BUTTON_PINS = (board.BUTTON_A, board.BUTTON_B)
-button_pin_to_val_when_pressed = {}
-for btn_pin in BUTTON_PINS:
-    button_pin_to_val_when_pressed[btn_pin] = True
-buttons = Buttons(button_pin_to_val_when_pressed)
-def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
-    def on_success():
-        arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
-        tone.success()
+# from buttons import Buttons
+# from microcontroller import Pin
+# BUTTON_PINS = (board.BUTTON_A, board.BUTTON_B)
+# button_pin_to_val_when_pressed = {}
+# for btn_pin in BUTTON_PINS:
+#     button_pin_to_val_when_pressed[btn_pin] = True
+# buttons = Buttons(button_pin_to_val_when_pressed)
+# def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+#     def on_success():
+#         arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
+#         tone.success()
 
-    if long_press:
-        if presses == 1:
-            sgt_connection.send_toggle_admin(on_success=on_success, on_failure=tone.error)
-        elif presses == 2:
-            sgt_connection.send_toggle_pause(on_success=on_success, on_failure=tone.error)
-        elif presses == 3:
-            sgt_connection.send_undo(on_success=on_success, on_failure=tone.error)
-    else:
-        seat = BUTTON_PINS.index(btn_pin) + 1
-        if presses == 1:
-            sgt_connection.send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
-        elif presses == 2:
-            sgt_connection.send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
+#     if long_press:
+#         if presses == 1:
+#             sgt_connection.send_toggle_admin(on_success=on_success, on_failure=tone.error)
+#         elif presses == 2:
+#             sgt_connection.send_toggle_pause(on_success=on_success, on_failure=tone.error)
+#         elif presses == 3:
+#             sgt_connection.send_undo(on_success=on_success, on_failure=tone.error)
+#     else:
+#         seat = BUTTON_PINS.index(btn_pin) + 1
+#         if presses == 1:
+#             sgt_connection.send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
+#         elif presses == 2:
+#             sgt_connection.send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
 
-for btn_pin in BUTTON_PINS:
-    buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
-# buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=on_success))
-buttons.set_fallback(tone.cascade)
+# for btn_pin in BUTTON_PINS:
+#     buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
+#     buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+#     buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
+#     buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
+#     buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
+# # buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=on_success))
+# buttons.set_fallback(tone.cascade)
 
-is_polling = None
-import gc
-mem_ts = time.monotonic()
 # ---------- MAIN LOOP -------------#
-while True:
-    if not sgt_connection.is_connected():
-          sgt_connection.connect()
-    while not sgt_connection.is_connected():
-          view.animate()
-    while sgt_connection.is_connected():
-        busy_animating = view.animate()
-        busy_pressing_buttons = buttons.loop()
-        interruptable = not(busy_animating or busy_pressing_buttons)
-        if interruptable and is_polling == False:
-            log.debug('======== ENABLE POLLING ========')
-        if not interruptable and is_polling == True:
-            log.debug('======== DISABLE POLLING ========')
-            if busy_animating and busy_pressing_buttons:
-                log.debug('======== Animating and Pressing Buttons ========')
-            elif busy_animating:
-                log.debug('======== Animating ========')
-            elif busy_pressing_buttons:
-                log.debug('======== Pressing Buttons ========')
-        is_polling = interruptable
-        if is_polling:
-            time.sleep(1) # Simulate delay in checking connection
-            sgt_connection.poll()
-            view.record_polling_delay(1)
-        # accelerometer.loop()
-        # orientation.loop()
-        if time.monotonic() - mem_ts > 10:
-            unreachables = gc.collect()
-            log.debug('Free memory: %s, Unreachables: %s', gc.mem_free(), unreachables)
-            mem_ts = time.monotonic()
+from loop import main_loop
+main_loop(sgt_connection, view, ())
