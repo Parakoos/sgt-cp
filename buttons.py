@@ -130,3 +130,8 @@ class Buttons():
             cb = self.callbacks.get(None)
         if cb != None:
             cb(*key)
+
+    def clear_callbacks(self):
+        for key in self.callbacks.keys():
+            log.debug(f'Remove key: {key}')
+            del self.callbacks[key]
