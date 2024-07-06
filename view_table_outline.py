@@ -5,6 +5,7 @@ from easing import EasingBase
 from adafruit_led_animation.animation.rainbowcomet import RainbowComet
 from adafruit_led_animation.animation.comet import Comet
 from sgt_animation import SgtAnimation, SgtSolid
+import time
 from utils import find_thing, set_brightness, TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions
 from math import ceil
 import adafruit_logging as logging
@@ -66,10 +67,8 @@ class ViewTableOutline(View):
                 return
         raise Exception('Weird admin state...')
     def switch_to_paused(self, state: GameState, old_state: GameState):
-        self.animation = SgtAnimation(
-            (RainbowComet(self.pixels, self.refresh_rate, tail_length=round(len(self.pixels)/0.5), bounce=True), 1, False),
-            (SgtSolid(self.pixels, self.refresh_rate, set_brightness(BLACK, self.brightness_highlight)), 0.5, True),
-        )
+        if not isinstance(self.animation, SgtPauseAnimation):
+            self.animation = SgtPauseAnimation(self)
     def switch_to_sandtimer_running(self, state: GameState, old_state: GameState):
         raise Exception('Not implemented yet')
     def switch_to_sandtimer_not_running(self, state: GameState, old_state: GameState):
@@ -148,16 +147,15 @@ class SgtSeatedAnimation():
         self.ease_warn_max_times = parent_view.ease_warn_max_times
 
         # Fade to black
-        def _set_brightness(brightness: float):
-            self.pixels.brightness = brightness
-            self.pixels.show()
-        saved_brightness = self.pixels.brightness
-        tranny = TransitionFunction(self.ease_fade(saved_brightness, 0, self.ease_fade_duration), _set_brightness)
+        tranny = TransitionFunction(self.ease_fade(self.pixels.brightness, 0, self.ease_fade_duration), self.set_brightness)
         while not tranny.loop():
-            pass
+            self.pixels.show()
         self.pixels.fill(BLACK)
         self.pixels.show()
-        self.pixels.brightness = saved_brightness
+        self.pixels.brightness = 1
+
+    def set_brightness(self, brightness: float):
+        self.pixels.brightness = brightness
 
     def on_state_update(self, state: GameState, old_state: GameState):
         pass
@@ -170,6 +168,52 @@ class SgtSeatedAnimation():
         upper_bound = ceil(line.midpoint + (line.length/2))
         for n in range (lower_bound, upper_bound):
             self.pixels[n%self.length] = line.color
+
+class SgtPauseAnimation(SgtSeatedAnimation):
+    def __init__(self, parent_view: ViewTableOutline):
+        super().__init__(parent_view)
+
+    def animate(self):
+        if len(self.overall_transition.fns) == 0:
+            fade_in = TransitionFunction(self.parent.ease_fade(0, 1, self.parent.ease_fade_duration), callback=self.set_brightness)
+            be_bright = TransitionFunction(self.parent.ease_fade(1, 1, 3), callback=self.set_brightness)
+            fade_out = TransitionFunction(self.parent.ease_fade(1, 0, self.parent.ease_fade_duration), callback=self.set_brightness)
+            be_dark = TransitionFunction(self.parent.ease_fade(0, 0, 2), callback=self.set_brightness)
+            self.overall_transition.fns.append(fade_in)
+            self.overall_transition.fns.append(be_bright)
+            self.overall_transition.fns.append(fade_out)
+            self.overall_transition.fns.append(be_dark)
+
+        self.overall_transition.loop()
+        self.pixels.fill(self.bg_color)
+        now = time.monotonic()
+        time_passed = now - self.last_animation_ts
+        pixels_moved = (self.parent.ease_line_pixels_per_seconds * time_passed * 2)
+        for line in self.seat_lines:
+            line.midpoint = (line.midpoint + pixels_moved) % self.length
+            self.draw_line(line)
+        self.pixels.show()
+        self.last_animation_ts = now
+        return len(self.overall_transition.fns) > 1
+
+    def on_state_update(self, state: GameState, old_state: GameState):
+        active_player = state.get_active_player()
+        sd = self.parent.seat_definitions[active_player.seat-1] if active_player else self.parent.seat_definitions[0]
+        color = active_player.color if active_player else state.color
+        self.fg_color = set_brightness(color, self.brightness_highlight)
+        self.bg_color = set_brightness(color, self.brightness_normal)
+        length = len(self.parent.pixels)
+        start_pixel = sd[0]
+        mid_pixel = (start_pixel + round(length/2)) % length
+        line_1 = Line(midpoint=start_pixel, length=sd[1], color=self.fg_color)
+        line_2 = Line(midpoint=mid_pixel, length=sd[1], color=self.fg_color)
+        self.seat_lines = [line_1, line_2]
+        self.start_ts = time.monotonic()
+        self.last_animation_ts = time.monotonic()
+        self.overall_transition = SerialTransitionFunctions([])
+
+    def set_line_midpoint(self, midpoint: float, line: Line):
+        line.midpoint = midpoint % self.length
 
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
     def __init__(self, parent_view: ViewTableOutline):
