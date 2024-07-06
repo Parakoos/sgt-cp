@@ -82,6 +82,7 @@ class View():
         self.time_reminder_check_timeout = 0
         self.current_times = self.state.get_current_timings()
         if self.state == None:
+            log.debug('No state in view.set_state. Go to no game')
             self.switch_to_no_game()
         elif old_state == None or self.state.state != old_state.state:
             if state.state == STATE_PLAYING:
