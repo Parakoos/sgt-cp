@@ -24,6 +24,9 @@ class SgtConnection:
     def poll(self) -> None:
         return None
 
+    def restart(self) -> None:
+        pass
+
     def send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
         if self.view.state.state in (STATE_START, STATE_FINISHED):
             return _failure(on_failure)

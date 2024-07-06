@@ -116,14 +116,18 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
         elif presses == 2:
             sgt_connection.send_secondary(seat=seat, on_success=on_success)
 
-for btn_pin in BUTTON_PINS:
-    buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
-
 
 # ---------- MAIN LOOP -------------#
-from loop import main_loop
-main_loop(sgt_connection, view, (buttons.loop))
+from loop import main_loop, ErrorHandlerResumeOnButtonPress
+error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)
+def on_connect():
+    buttons.clear_callbacks()
+    for btn_pin in BUTTON_PINS:
+        buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=4, long_press=True, callback = btn_callback)
+
+main_loop(sgt_connection, view, on_connect, error_handler.on_error, (buttons.loop,))

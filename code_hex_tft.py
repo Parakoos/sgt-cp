@@ -93,11 +93,9 @@ button_pin_to_val_when_pressed = {
     board.D1: True,
     board.D2: True,
 }
-# for btn_pin in BUTTON_PINS:
-#     button_pin_to_val_when_pressed[btn_pin] = BUTTON_VAL_WHEN_PRESSED
 buttons = Buttons(button_pin_to_val_when_pressed)
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
-    log.debug('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
+    log.info('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
     if long_press:
         if presses == 1:
             sgt_connection.send_toggle_admin()
@@ -105,6 +103,8 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
             sgt_connection.send_toggle_pause()
         elif presses == 3:
             sgt_connection.send_undo()
+        elif presses == 4:
+            raise Exception('Test Error!')
     else:
         seat = BUTTON_PINS.index(btn_pin) + 1
         if presses == 1:
@@ -112,13 +112,18 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
         elif presses == 2:
             sgt_connection.send_secondary(seat=seat)
 
-for btn_pin in BUTTON_PINS:
-    buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
-    buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
 
 # ---------- MAIN LOOP -------------#
-from loop import main_loop
-main_loop(sgt_connection, view, (buttons.loop))
+from loop import main_loop, ErrorHandlerResumeOnButtonPress
+error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)
+def on_connect():
+    buttons.clear_callbacks()
+    for btn_pin in BUTTON_PINS:
+        buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
+        buttons.set_callback(btn_pin, presses=4, long_press=True, callback = btn_callback)
+
+main_loop(sgt_connection, view, on_connect, error_handler.on_error, (buttons.loop,))

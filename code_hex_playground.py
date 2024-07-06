@@ -168,4 +168,4 @@ sgt_connection = SgtConnectionBluetooth(view,
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop
-main_loop(sgt_connection, view, ())
+main_loop(sgt_connection, view)
