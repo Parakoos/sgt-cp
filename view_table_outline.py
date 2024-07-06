@@ -28,15 +28,15 @@ class ViewTableOutline(View):
             ease_warn_max_times: int,
             ease_line: EasingBase,
             ease_line_pixels_per_seconds: int,
-            refresh_rate: float=0.01,
+            comet_pixels_per_second: int,
         ):
         super().__init__()
         self.pixels = pixels
         self.seat_definitions = seat_definitions
         self.seat_count = len(seat_definitions)
         self.pixels.auto_write = False
-        self.animation = SgtAnimation((SgtSolid(self.pixels, refresh_rate, BLACK), None, True))
-        self.refresh_rate = refresh_rate
+        self.comet_refresh_rate = 1/comet_pixels_per_second
+        self.animation = SgtAnimation((SgtSolid(self.pixels, 0.01, BLACK), None, True))
         self.brightness_normal = brightness_normal
         self.brightness_highlight = brightness_highlight
         self.ease_fade = ease_fade
@@ -79,11 +79,11 @@ class ViewTableOutline(View):
         self._activate_multiplayer_animation()
     def switch_to_no_game(self):
         self.animation = SgtAnimation(
-            (RainbowComet(self.pixels, self.refresh_rate, tail_length=round(len(self.pixels)/0.5), ring=True), 1, True),
+            (RainbowComet(self.pixels, self.comet_refresh_rate, tail_length=round(len(self.pixels)/2), ring=True), None, True),
         )
     def switch_to_not_connected(self):
         self.animation = SgtAnimation(
-            (Comet(self.pixels, self.refresh_rate, BLUE, tail_length=round(len(self.pixels)/0.5), ring=True), 1, True),
+            (Comet(self.pixels, self.comet_refresh_rate, BLUE, tail_length=round(len(self.pixels)/2), ring=True), None, True),
         )
     def switch_to_error(self):
         if not isinstance(self.animation, SgtErrorAnimation):

@@ -52,6 +52,7 @@ class ViewMulti(View):
         for view in self.views:
             view.switch_to_error()
     def set_state(self, state: GameState):
+        super().set_state(state)
         self.state = state
         for view in self.views:
             view.set_state(state)

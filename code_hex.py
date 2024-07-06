@@ -18,6 +18,7 @@ EASE_WARN_DURATION = 0.5            # The duration of a warning
 EASE_WARN_MAX_TIMES = 5             # Maximum times a warning is shown in series
 EASE_LINE = BounceEaseOut           # Easing function for moving the active player line
 EASE_LINE_PIXEL_PER_SEC = 36        # How was the active player line moves (average)
+COMET_PIXEL_PER_SEC = 10            # How far does comet animations go, in pixels, per second.
 
 BUTTON_PINS = [board.IO1, board.IO2, board.IO3, board.IO4, board.IO5, board.IO6]
 BUTTON_VAL_WHEN_PRESSED = False
@@ -72,6 +73,7 @@ view = ViewMulti([
           ease_warn_max_times=EASE_WARN_MAX_TIMES,
           ease_line=EASE_LINE,
           ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
+          comet_pixels_per_second=COMET_PIXEL_PER_SEC,
           ),
      ViewSeatedActionLeds(arcade_leds),
      ])
