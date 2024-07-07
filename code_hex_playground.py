@@ -169,5 +169,6 @@ sgt_connection = SgtConnectionBluetooth(view,
 # buttons.set_fallback(tone.cascade)
 
 # ---------- MAIN LOOP -------------#
-from loop import main_loop
-main_loop(sgt_connection, view)
+from loop import main_loop, ErrorHandlerNoResume
+error_handler = ErrorHandlerNoResume(view)
+main_loop(sgt_connection, view, on_error=error_handler.on_error)

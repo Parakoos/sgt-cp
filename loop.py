@@ -59,22 +59,35 @@ def main_loop(
 				log_exception(on_restart_exception)
 
 class ErrorHandlerResumeOnButtonPress:
-    def __init__(self, view: View, buttons: Buttons) -> None:
-        self.view = view
-        self.buttons = buttons
-        self.in_error = False
+	def __init__(self, view: View, buttons: Buttons) -> None:
+		self.view = view
+		self.buttons = buttons
+		self.in_error = False
 
-    def clear_error_on_button_press(self, btn_pin: Pin, presses: int, long_press: bool):
-        self.in_error = False
+	def clear_error_on_button_press(self, btn_pin: Pin, presses: int, long_press: bool):
+		self.in_error = False
 
-    def on_error(self, exception: Exception):
-        self.in_error = True
-        self.buttons.clear_callbacks()
-        self.buttons.set_fallback(self.clear_error_on_button_press)
+	def on_error(self, exception: Exception):
+		self.in_error = True
+		self.buttons.clear_callbacks()
+		self.buttons.set_fallback(self.clear_error_on_button_press)
 
-        log.info('Animating error view until any button pressed')
-        while self.in_error:
-            self.view.animate()
-            self.buttons.loop()
-        self.buttons.clear_callbacks()
-        log.info('On error handler completed due to button press')
+		log.info('Animating error view until any button pressed')
+		while self.in_error:
+			self.view.animate()
+			self.buttons.loop()
+		self.buttons.clear_callbacks()
+		log.info('On error handler completed due to button press')
+
+class ErrorHandlerNoResume:
+	def __init__(self, view: View) -> None:
+		self.view = view
+
+	def on_error(self, exception: Exception):
+		log.info('Animating error until end of time')
+		try:
+			while True:
+				self.view.animate()
+		except Exception:
+			while True:
+				pass
