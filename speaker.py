@@ -5,25 +5,25 @@ import board
 import digitalio
 
 try:
-    from audiocore import RawSample
+	from audiocore import RawSample
 except ImportError:
-    from audioio import RawSample
+	from audioio import RawSample
 
 try:
-    from audioio import AudioOut
+	from audioio import AudioOut
 except ImportError:
-    try:
-        from audiopwmio import PWMAudioOut as AudioOut
-    except ImportError:
-        pass  # not always supported by every board!
+	try:
+		from audiopwmio import PWMAudioOut as AudioOut
+	except ImportError:
+		pass  # not always supported by every board!
 
-TONE_FREQ = [ 262,  # C4
-              294,  # D4
-              330,  # E4
-              349,  # F4
-              392,  # G4
-              440,  # A4
-              494 ] # B4
+TONE_FREQ = [ 262,# C4
+			294,  # D4
+			330,  # E4
+			349,  # F4
+			392,  # G4
+			440,  # A4
+			494 ] # B4
 
 def tone(frequency, duration):
 	# FREQUENCY = 440  # 440 Hz middle 'A'
@@ -52,18 +52,18 @@ def tone(frequency, duration):
 	audio.stop()  # and then stop.
 
 def beep_success():
-    tone(TONE_FREQ[3], duration=0.1)
+	tone(TONE_FREQ[3], duration=0.1)
 
 def beep_shake():
-    tone(TONE_FREQ[5], duration=0.1)
-    tone(TONE_FREQ[2], duration=0.1)
-    tone(TONE_FREQ[5], duration=0.1)
-    tone(TONE_FREQ[2], duration=0.1)
+	tone(TONE_FREQ[5], duration=0.1)
+	tone(TONE_FREQ[2], duration=0.1)
+	tone(TONE_FREQ[5], duration=0.1)
+	tone(TONE_FREQ[2], duration=0.1)
 
 def beep_error():
-    tone(TONE_FREQ[0], duration=0.1)
-    tone(TONE_FREQ[6], duration=0.2)
+	tone(TONE_FREQ[0], duration=0.1)
+	tone(TONE_FREQ[6], duration=0.2)
 
 def cascade():
-    for i in range(len(TONE_FREQ)):
-        tone(TONE_FREQ[i], duration=0.1)
+	for i in range(len(TONE_FREQ)):
+		tone(TONE_FREQ[i], duration=0.1)

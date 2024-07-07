@@ -11,23 +11,23 @@ from adafruit_circuitplayground import cp
 BLUETOOTH_FIELD_DIVIDER = ';'
 BLUETOOTH_FIELD_ORDER = ["timerMode","state","color","turnTime","playerTime"]
 suggestions = {
-    "script": [
-        f'0 {BLUETOOTH_FIELD_DIVIDER.join(BLUETOOTH_FIELD_ORDER)}%0A'
+	"script": [
+		f'0 {BLUETOOTH_FIELD_DIVIDER.join(BLUETOOTH_FIELD_ORDER)}%0A'
 ],
-    "scriptName": BLE_DEVICE_NAME + " Write",
-    "defaultTriggers": ["includePlayers","includePause","includeAdmin","includeSimultaneousTurns","includeGameStart","includeGameEnd","includeSandTimerStart","includeSandTimerReset","includeSandTimerStop","includeSandTimerOutOfTime","runOnStateChange","runOnPlayerOrderChange","runOnPoll","runOnBluetoothConnect","runOnBluetoothDisconnect"],
-    "actionMap": [
-        ('Button AB', 'remoteActionToggleAdmin'),
-        ('Button A', 'remoteActionPrimary'),
-        ('Button B', 'remoteActionSecondary'),
-        ('Shake', 'remoteActionUndo'),
-        ('Connected', 'remoteActionPoll'),
-        ('To Face Down', 'remoteActionTurnAdminOn'),
-        ('From Face Down', 'remoteActionTurnAdminOff'),
-        ('Switch ON', 'remoteActionTurnPauseOn'),
-        ('Switch OFF', 'remoteActionTurnPauseOff'),
-    ],
-    "actionMapName": BLE_DEVICE_NAME + " Actions",
+	"scriptName": BLE_DEVICE_NAME + " Write",
+	"defaultTriggers": ["includePlayers","includePause","includeAdmin","includeSimultaneousTurns","includeGameStart","includeGameEnd","includeSandTimerStart","includeSandTimerReset","includeSandTimerStop","includeSandTimerOutOfTime","runOnStateChange","runOnPlayerOrderChange","runOnPoll","runOnBluetoothConnect","runOnBluetoothDisconnect"],
+	"actionMap": [
+		('Button AB', 'remoteActionToggleAdmin'),
+		('Button A', 'remoteActionPrimary'),
+		('Button B', 'remoteActionSecondary'),
+		('Shake', 'remoteActionUndo'),
+		('Connected', 'remoteActionPoll'),
+		('To Face Down', 'remoteActionTurnAdminOn'),
+		('From Face Down', 'remoteActionTurnAdminOff'),
+		('Switch ON', 'remoteActionTurnPauseOn'),
+		('Switch OFF', 'remoteActionTurnPauseOff'),
+	],
+	"actionMapName": BLE_DEVICE_NAME + " Actions",
 }
 
 # ---------- IMPORT REQUIRED TO SHOW SPLASH -------------#
@@ -54,23 +54,23 @@ tone = TonePlayground()
 # ---------- BLUETOOTH SETUP -------------#
 from sgt_connection_bluetooth import SgtConnectionBluetooth
 def on_connect():
-    ts = time.monotonic()
-    while time.monotonic() - ts < 2:
-        view.animate()
-    sgt_connection.send("Connected")
+	ts = time.monotonic()
+	while time.monotonic() - ts < 2:
+		view.animate()
+	sgt_connection.send("Connected")
 
 def on_state_line(state_line, timestamp):
-    if state_line == "GET SETUP SUGGESTIONS":
-        sgt_connection.send(json.dumps(suggestions))
-        sgt_connection.send("Connected")
-    else:
-        view.set_state(GameState(
-            ble_state_string = state_line,
-            ble_field_order = BLUETOOTH_FIELD_ORDER,
-            ble_field_divider = BLUETOOTH_FIELD_DIVIDER,
-            timestamp_offset = timestamp - time.monotonic()
-            )
-        )
+	if state_line == "GET SETUP SUGGESTIONS":
+		sgt_connection.send(json.dumps(suggestions))
+		sgt_connection.send("Connected")
+	else:
+		view.set_state(GameState(
+			ble_state_string = state_line,
+			ble_field_order = BLUETOOTH_FIELD_ORDER,
+			ble_field_divider = BLUETOOTH_FIELD_DIVIDER,
+			timestamp_offset = timestamp - time.monotonic()
+			)
+		)
 sgt_connection = SgtConnectionBluetooth(view, on_connect=on_connect, on_state_line=on_state_line)
 
 # ---------- ACCELEROMETER / ORIENTATION SETUP -------------#
@@ -82,8 +82,8 @@ orientation.set_callback("z+", lambda _: sgt_connection.send("To Face Up"), lamb
 # ---------- BUTTONS SETUP -------------#
 from buttons import Buttons
 buttons = Buttons({
-    board.BUTTON_A: True,
-    board.BUTTON_B: True,
+	board.BUTTON_A: True,
+	board.BUTTON_B: True,
 })
 buttons.set_callback(board.BUTTON_A, callback = lambda : sgt_connection.send("Button A", on_success=tone.success))
 buttons.set_callback(board.BUTTON_B, callback = lambda : sgt_connection.send("Button B", on_success=tone.success))
@@ -92,14 +92,14 @@ buttons.set_fallback(tone.cascade)
 
 # ---------- MAIN LOOP -------------#
 while True:
-    if not sgt_connection.is_connected():
-          sgt_connection.connect()
-    while not sgt_connection.is_connected():
-          view.animate()
-    on_connect()
-    while sgt_connection.is_connected():
-        sgt_connection.poll()
-        buttons.loop()
-        accelerometer.loop()
-        orientation.loop()
-        view.animate()
+	if not sgt_connection.is_connected():
+		sgt_connection.connect()
+	while not sgt_connection.is_connected():
+		view.animate()
+	on_connect()
+	while sgt_connection.is_connected():
+		sgt_connection.poll()
+		buttons.loop()
+		accelerometer.loop()
+		orientation.loop()
+		view.animate()
