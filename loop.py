@@ -23,20 +23,26 @@ def main_loop(
 				connection.connect()
 			while not connection.is_connected():
 				view.animate()
+			view.switch_to_no_game()
 			if on_connect:
 				on_connect()
 			while connection.is_connected():
 				busy = view.animate()
 				for loop in loops:
 					busy = busy or loop() # Each loop (and view.animate) should return True if it should block polling
+				messages_sent = connection.send_queue()
 				if busy and is_polling:
 					log.debug('======== DISABLE POLLING ========')
 					is_polling = False
 				elif not busy and not is_polling:
 					log.debug('======== ENABLE POLLING ========')
 					is_polling = True
+				elif messages_sent and not is_polling:
+					log.debug('======== POLLING BECAUSE OF MESSAGE SENT ========')
+					is_polling = True
 				if is_polling:
-					connection.poll()
+					connection.poll_for_new_messages()
+				connection.handle_new_messages()
 				if time.monotonic() - mem_ts > 10:
 					log_memory_usage('End of Loop')
 					mem_ts = time.monotonic()

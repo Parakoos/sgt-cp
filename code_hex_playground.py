@@ -31,36 +31,6 @@ BLE_DEVICE_NAME = "Hex Table (Playground)"
 BLUETOOTH_FIELD_DIVIDER = ';'
 # BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtGameStateVersion','sgtName','sgtSeat','sgtTs','sgtPlayerSeats','sgtPlayerColors','sgtPlayerNames','sgtPlayerActions','sgtActionPrimary','sgtActionInactive','sgtActionSecondary','sgtActionAdmin','sgtActionPause','sgtActionUndo']
 BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime', 'sgtTimeReminders','sgtPlayerSeats','sgtPlayerColors','sgtPlayerActions','sgtSeat']
-suggestions = {
-	"script": [
-		f'0 %0A{BLUETOOTH_FIELD_DIVIDER.join(BLUETOOTH_FIELD_ORDER)}%0A'
-],
-	"scriptName": BLE_DEVICE_NAME + " Write",
-	"defaultTriggers": ["includePlayers","includePause","includeAdmin","includeSimultaneousTurns","includeGameStart","includeGameEnd","includeSandTimerStart","includeSandTimerReset","includeSandTimerStop","includeSandTimerOutOfTime","runOnStateChange","runOnPlayerOrderChange", "runOnPoll"],
-	"actionMap": [
-		('Enable ACK', 'remoteActionEnableAcknowledge'),
-		('ACK', 'remoteActionAcknowledge'),
-		('Poll', 'remoteActionPoll'),
-		# ('Button AB', 'remoteActionToggleAdmin'),
-		# ('Button A', 'remoteActionPrimary'),
-		# ('Button B', 'remoteActionSecondary'),
-		# ('Shake', 'remoteActionUndo'),
-		# ('To Face Down', 'remoteActionTurnAdminOn'),
-		# ('From Face Down', 'remoteActionTurnAdminOff'),
-		# ('Switch ON', 'remoteActionTurnPauseOn'),
-		# ('Switch OFF', 'remoteActionTurnPauseOff'),
-		('Primary', 'remoteActionPrimary'),
-		('Secondary', 'remoteActionSecondary'),
-		('Undo', 'remoteActionUndo'),
-		('ToggleAdmin', 'remoteActionToggleAdmin'),
-		('TurnAdminOn', 'remoteActionTurnAdminOn'),
-		('TurnAdminOff', 'remoteActionTurnAdminOff'),
-		('TogglePause', 'remoteActionTogglePause'),
-		('TurnPauseOn', 'remoteActionTurnPauseOn'),
-		('TurnPauseOff', 'remoteActionTurnPauseOff'),
-	],
-	"actionMapName": "Hardcoded Actions",
-}
 
 # ---------- SHARED IMPORTS -------------#
 import board
@@ -107,27 +77,16 @@ tone = Tone()
 
 # ---------- BLUETOOTH SETUP -------------#
 from sgt_connection_bluetooth import SgtConnectionBluetooth
-def on_state_line(state_line, timestamp):
-	view.set_state(GameState(
-		ble_state_string = state_line,
-		ble_field_order = BLUETOOTH_FIELD_ORDER,
-		ble_field_divider = BLUETOOTH_FIELD_DIVIDER,
-		timestamp_offset = timestamp - time.monotonic()
-		)
-	)
-def poll_for_latest_state():
-	log.debug('Polling for new data')
-	sgt_connection.send("Poll")
 sgt_connection = SgtConnectionBluetooth(view,
-					suggestions=suggestions,
-					ble_device_name=BLE_DEVICE_NAME,
-					on_state_line=on_state_line,
-					on_error=poll_for_latest_state)
+					device_name=BLE_DEVICE_NAME,
+					field_order=BLUETOOTH_FIELD_ORDER,
+					field_divider=BLUETOOTH_FIELD_DIVIDER,
+				)
 
 # ---------- ACCELEROMETER / ORIENTATION SETUP -------------#
 # from accelerometer_playground import Accelerometer_Playground
 # accelerometer = Accelerometer_Playground(shake_threshold=SHAKE_THRESHOLD, double_shake_prevention_timeout=DOUBLE_SHAKE_PREVENTION_TIMEOUT)
-# accelerometer.set_shake_callback(lambda: sgt_connection.send_undo(on_success=tone.shake))
+# accelerometer.set_shake_callback(lambda: sgt_connection.enqueue_send_undo(on_success=tone.shake))
 # from orientation import Orientation, AXIS_Z, DIR_NEG
 # orientation = Orientation(accelerometer, ORIENTATION_ON_THRESHOLD, ORIENTATION_OFF_THRESHOLD, ORIENTATION_CHANGE_DELAY)
 # orientation.set_callback(AXIS_Z, DIR_NEG, lambda _: sgt_connection.send("To Face Down"), lambda _: sgt_connection.send("From Face Down"))
@@ -147,17 +106,17 @@ sgt_connection = SgtConnectionBluetooth(view,
 
 #	if long_press:
 #		if presses == 1:
-#			sgt_connection.send_toggle_admin(on_success=on_success, on_failure=tone.error)
+#			sgt_connection.enqueue_send_toggle_admin(on_success=on_success, on_failure=tone.error)
 #		elif presses == 2:
-#			sgt_connection.send_toggle_pause(on_success=on_success, on_failure=tone.error)
+#			sgt_connection.enqueue_send_toggle_pause(on_success=on_success, on_failure=tone.error)
 #		elif presses == 3:
-#			sgt_connection.send_undo(on_success=on_success, on_failure=tone.error)
+#			sgt_connection.enqueue_send_undo(on_success=on_success, on_failure=tone.error)
 #	else:
 #		seat = BUTTON_PINS.index(btn_pin) + 1
 #		if presses == 1:
-#			sgt_connection.send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
+#			sgt_connection.enqueue_send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
 #		elif presses == 2:
-#			sgt_connection.send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
+#			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
 
 # for btn_pin in BUTTON_PINS:
 #	buttons.set_callback(btn_pin, presses=1, callback = btn_callback)

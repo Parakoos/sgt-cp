@@ -45,39 +45,52 @@ class SgtConnectionMQTT(SgtConnection):
 			ssl_context=ssl_context,
 			is_ssl=True,
 		)
-		self.mqtt_client.on_connect = self.on_connected
-		self.mqtt_client.on_disconnect = self.on_disconnected
-		self.mqtt_client.on_message = self.on_message
+		self.mqtt_client.on_connect = self._on_connected
+		self.mqtt_client.on_disconnect = self._on_disconnected
+		self.mqtt_client.on_message = self._on_message
 		self.mqtt_client.enable_logger(logging, log_level=20, logger_name="mqtt")
+		self.queue = []
+		self.latest_message = None
 
 	def is_connected(self):
 		return self.mqtt_client.is_connected()
 
-	def ensure_connected_to_wifi(self):
+	def _ensure_connected_to_wifi(self):
 		if radio.ap_info == None:
 			self.view.set_connection_progress_text(f"Connecting to WIFI ({self.wifi_ssid})")
 			radio.connect(self.wifi_ssid, self.wifi_password)
 			log.info(radio.ap_info)
 
 	def connect(self) -> bool:
-		self.ensure_connected_to_wifi()
-		self.lookup_unix_time_offset()
+		self._ensure_connected_to_wifi()
+		self._lookup_unix_time_offset()
 		self.view.set_connection_progress_text(f"Connecting to MQTT")
 		self.mqtt_client.connect()
 
-	def on_connected(self, client, userdata, flags, rc):
+	def _on_connected(self, client, userdata, flags, rc):
 		log.info(f"Connected to MQTT! Listening for topic changes on {self.mqtt_topic_game}")
 		client.subscribe(self.mqtt_topic_game)
 
-	def on_disconnected(self, client, userdata, rc):
+	def _on_disconnected(self, client, userdata, rc):
 		log.info("Disconnected from MQTT!")
 
-	def on_message(self, client, topic, message:str):
+	def _on_message(self, client, topic, message:str):
 		log.info(f"MQTT message: {message}")
-		game_state = GameState(json_state_string=message, timestamp_offset=self.unix_time_offset)
-		self.view.set_state(game_state)
+		self.latest_message = message
 
-	def send(self, value: str, seat: int|None = None):
+	def _enqueue_send(self, value: str, seat: int|None = None):
+		if value != None:
+			self.queue.append((value, seat))
+
+	def send_queue(self) -> bool:
+		if len(self.queue) == 0:
+			return False
+		while self.queue:
+			value, seat = self.queue.pop(0)
+			self._send(value, seat)
+		return True
+
+	def _send(self, value: str, seat: int|None = None):
 		if value == None:
 			return
 		log.info("send: %s", value)
@@ -90,26 +103,25 @@ class SgtConnectionMQTT(SgtConnection):
 		action = json.dumps(action_map)
 		log.debug('MQTT Publish to %s value %s', self.mqtt_topic_command, action)
 		self.mqtt_client.publish(self.mqtt_topic_command, action)
-		timeout = time.monotonic() + 4
 
 		new_game_state = self.predict_next_game_state(value)
 		if new_game_state:
 			self.view.set_state(new_game_state)
-			while self.view.animate():
-				pass
 
-		while self.view.state.game_state_version == gameStateVersion and time.monotonic() < timeout:
-			log.debug('force polling')
-			self.poll()
-
-	def poll(self):
+	def poll_for_new_messages(self):
 		if not self.mqtt_client.is_connected():
 			self.connect()
 		start_ts = time.monotonic()
 		self.mqtt_client.loop(1)
 		self.view.record_polling_delay(time.monotonic() - start_ts)
 
-	def lookup_unix_time_offset(self):
+	def handle_new_messages(self) -> None:
+		if self.latest_message != None:
+			game_state = GameState(json_state_string=self.latest_message, timestamp_offset=self.unix_time_offset)
+			self.latest_message = None
+			self.view.set_state(game_state)
+
+	def _lookup_unix_time_offset(self):
 		if self.unix_time_offset != 0:
 			log.debug(f'Unix time already set to {self.unix_time_offset:,}')
 			return
@@ -124,21 +136,21 @@ class SgtConnectionMQTT(SgtConnection):
 		log.info(f"Current Unix Time: {time_unix_sec} at mono {now} (diff: {diff})")
 		self.unix_time_offset = diff + self.manual_time_offset
 
-	def send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_primary(seat, on_success, on_failure), seat=seat)
-	def send_secondary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_secondary(seat, on_success, on_failure), seat=seat)
-	def send_toggle_admin(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_toggle_admin(on_success, on_failure))
-	def send_admin_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_admin_on(on_success, on_failure))
-	def send_admin_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_admin_off(on_success, on_failure))
-	def send_toggle_pause(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_toggle_pause(on_success, on_failure))
-	def send_pause_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_pause_on(on_success, on_failure))
-	def send_pause_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_pause_off(on_success, on_failure))
-	def send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self.send(super().send_undo(on_success, on_failure))
+	def enqueue_send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_primary(seat, on_success, on_failure), seat=seat)
+	def enqueue_send_secondary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_secondary(seat, on_success, on_failure), seat=seat)
+	def enqueue_send_toggle_admin(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_toggle_admin(on_success, on_failure))
+	def enqueue_send_admin_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_admin_on(on_success, on_failure))
+	def enqueue_send_admin_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_admin_off(on_success, on_failure))
+	def enqueue_send_toggle_pause(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_toggle_pause(on_success, on_failure))
+	def enqueue_send_pause_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_pause_on(on_success, on_failure))
+	def enqueue_send_pause_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_pause_off(on_success, on_failure))
+	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_send(super().enqueue_send_undo(on_success, on_failure))

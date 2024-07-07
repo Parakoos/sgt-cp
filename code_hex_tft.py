@@ -98,19 +98,19 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 	log.info('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
 	if long_press:
 		if presses == 1:
-			sgt_connection.send_toggle_admin()
+			sgt_connection.enqueue_send_toggle_admin()
 		elif presses == 2:
-			sgt_connection.send_toggle_pause()
+			sgt_connection.enqueue_send_toggle_pause()
 		elif presses == 3:
-			sgt_connection.send_undo()
+			sgt_connection.enqueue_send_undo()
 		elif presses == 4:
 			raise Exception('Test Error!')
 	else:
 		seat = BUTTON_PINS.index(btn_pin) + 1
 		if presses == 1:
-			sgt_connection.send_primary(seat=seat)
+			sgt_connection.enqueue_send_primary(seat=seat)
 		elif presses == 2:
-			sgt_connection.send_secondary(seat=seat)
+			sgt_connection.enqueue_send_secondary(seat=seat)
 
 
 # ---------- MAIN LOOP -------------#
