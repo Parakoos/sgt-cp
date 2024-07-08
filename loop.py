@@ -1,6 +1,6 @@
 import adafruit_logging as logging
 log = logging.getLogger()
-from utils import log_memory_usage, log_exception
+from utils.log import log_memory_usage, log_exception
 from sgt_connection import SgtConnection
 from view import View
 from buttons import Buttons

@@ -3,7 +3,6 @@ log = logging.getLogger()
 log.setLevel(10)
 from game_state import GameState
 # from adafruit_circuitplayground import cp
-from easing import LinearInOut, BounceEaseInOut, CubicEaseInOut
 
 # =================== Settings =================== #
 SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
@@ -14,16 +13,7 @@ DOUBLE_SHAKE_PREVENTION_TIMEOUT = 3		# Seconds after a shake when no second shak
 ORIENTATION_ON_THRESHOLD = 9.0			# 0-10. Higher number, less sensitive.
 ORIENTATION_OFF_THRESHOLD = 4.0			# 0-10. Higher number, more sensitive.
 ORIENTATION_CHANGE_DELAY = 1			# How long to debounce changes in orientation
-EASE_FADE = LinearInOut					# Easing function for color fades
-EASE_FADE_DURATION = 0.5				# Duration of color fades
-EASE_WARN = (CubicEaseInOut, CubicEaseInOut) # Easing functions to and from a warning highlight, mostly during time reminders.
-EASE_WARN_DURATION = 0.5				# The duration of a warning
-EASE_WARN_MAX_TIMES = 5					# Maximum times a warning is shown in series
-EASE_LINE = BounceEaseInOut				# Easing function for moving the active player line
-EASE_LINE_PIXEL_PER_SEC = 5				# How was the active player line moves (average)
-COMET_PIXEL_PER_SEC = 10				# How far does comet animations go, in pixels, per second.
 # =============== End of Settings ================ #
-
 
 # Suggested Script and Action Mapping
 # These are sent on connection to the SGT to pre-populate the Action/Write scripts for quick save.
@@ -34,7 +24,6 @@ BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgt
 
 # ---------- SHARED IMPORTS -------------#
 import board
-import time
 
 # ---------- VIEW SETUP -------------#
 from view_multi import ViewMulti
@@ -50,20 +39,7 @@ from adafruit_dotstar import DotStar
 dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
 view = ViewMulti([
 	ViewConsole(),
-	ViewTableOutline(
-		dots,
-		seat_definitions=SEAT_DEFINITIONS,
-		brightness_normal=LED_BRIGHTNESS_NORMAL,
-		brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT,
-		ease_fade=EASE_FADE,
-		ease_fade_duration=EASE_FADE_DURATION,
-		ease_warn=EASE_WARN,
-		ease_warn_duration=EASE_WARN_DURATION,
-		ease_warn_max_times=EASE_WARN_MAX_TIMES,
-		ease_line=EASE_LINE,
-		ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
-		comet_pixels_per_second=COMET_PIXEL_PER_SEC,
-		),
+	ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS),
 	#  ViewSeatedActionLeds(arcade_leds),
 	])
 view.set_state(GameState())
@@ -92,42 +68,48 @@ sgt_connection = SgtConnectionBluetooth(view,
 # orientation.set_callback(AXIS_Z, DIR_NEG, lambda _: sgt_connection.send("To Face Down"), lambda _: sgt_connection.send("From Face Down"))
 
 # ---------- BUTTONS SETUP -------------#
-# from buttons import Buttons
-# from microcontroller import Pin
-# BUTTON_PINS = (board.BUTTON_A, board.BUTTON_B)
-# button_pin_to_val_when_pressed = {}
-# for btn_pin in BUTTON_PINS:
-#	button_pin_to_val_when_pressed[btn_pin] = True
-# buttons = Buttons(button_pin_to_val_when_pressed)
-# def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
-#	def on_success():
-#		arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
-#		tone.success()
+from buttons import Buttons
+from microcontroller import Pin
+BUTTON_PINS = (board.BUTTON_A, board.BUTTON_B)
+button_pin_to_val_when_pressed = {}
+for btn_pin in BUTTON_PINS:
+	button_pin_to_val_when_pressed[btn_pin] = True
+buttons = Buttons(button_pin_to_val_when_pressed)
+def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+	def on_success():
+		# arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
+		tone.success()
 
-#	if long_press:
-#		if presses == 1:
-#			sgt_connection.enqueue_send_toggle_admin(on_success=on_success, on_failure=tone.error)
-#		elif presses == 2:
-#			sgt_connection.enqueue_send_toggle_pause(on_success=on_success, on_failure=tone.error)
-#		elif presses == 3:
-#			sgt_connection.enqueue_send_undo(on_success=on_success, on_failure=tone.error)
-#	else:
-#		seat = BUTTON_PINS.index(btn_pin) + 1
-#		if presses == 1:
-#			sgt_connection.enqueue_send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
-#		elif presses == 2:
-#			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
+	if long_press:
+		if presses == 1:
+			sgt_connection.enqueue_send_toggle_admin(on_success=on_success, on_failure=tone.error)
+		elif presses == 2:
+			sgt_connection.enqueue_send_toggle_pause(on_success=on_success, on_failure=tone.error)
+		elif presses == 3:
+			sgt_connection.enqueue_send_undo(on_success=on_success, on_failure=tone.error)
+		elif presses == 4:
+			raise Exception('Test Error!')
+	else:
+		seat = BUTTON_PINS.index(btn_pin) + 1
+		if presses == 1:
+			sgt_connection.enqueue_send_primary(seat=seat, on_success=on_success, on_failure=tone.error)
+		elif presses == 2:
+			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
 
-# for btn_pin in BUTTON_PINS:
-#	buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
-#	buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
-#	buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
-#	buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
-#	buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
-# # buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=on_success))
-# buttons.set_fallback(tone.cascade)
 
 # ---------- MAIN LOOP -------------#
-from loop import main_loop, ErrorHandlerNoResume
-error_handler = ErrorHandlerNoResume(view)
-main_loop(sgt_connection, view, on_error=error_handler.on_error)
+from loop import main_loop, ErrorHandlerResumeOnButtonPress
+error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)
+def on_connect():
+	buttons.clear_callbacks()
+	for btn_pin in BUTTON_PINS:
+		buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=4, long_press=True, callback = btn_callback)
+		buttons.set_fallback(btn_callback)
+		# buttons.set_callback_multikey({board.BUTTON_A, board.BUTTON_B}, callback=lambda : sgt_connection.send("Button AB", on_success=on_success))
+
+main_loop(sgt_connection, view, on_connect, error_handler.on_error, (buttons.loop,))

@@ -3,22 +3,11 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
-from easing import LinearInOut, BounceEaseOut, CubicEaseInOut
 
 # =================== Settings =================== #
 PIXELS_PIN = board.IO43			# Pin of the neopixel strip
 PIXELS_LENGTH = 252				# Length of the neopixel strip
 SEAT_DEFINITIONS = ((231,42),(189,42),(147,42),(105,42),(63,42),(21,42))
-LED_BRIGHTNESS_NORMAL = 0.1		# 0-1. How bright do you want the LED?
-LED_BRIGHTNESS_HIGHLIGHT = 0.5	# When highlighting something, how bright should it be?
-EASE_FADE = LinearInOut			# Easing function for color fades
-EASE_FADE_DURATION = 0.8		# Duration of color fades
-EASE_WARN = (CubicEaseInOut, CubicEaseInOut) # Easing functions to and from a warning highlight, mostly during time reminders.
-EASE_WARN_DURATION = 0.5		# The duration of a warning
-EASE_WARN_MAX_TIMES = 5			# Maximum times a warning is shown in series
-EASE_LINE = BounceEaseOut		# Easing function for moving the active player line
-EASE_LINE_PIXEL_PER_SEC = 36	# How was the active player line moves (average)
-COMET_PIXEL_PER_SEC = 10		# How far does comet animations go, in pixels, per second.
 
 BUTTON_PINS = [board.IO1, board.IO2, board.IO3, board.IO4, board.IO5, board.IO6]
 BUTTON_VAL_WHEN_PRESSED = False
@@ -28,11 +17,11 @@ SPI_CLOCK_PIN = board.IO7
 SPI_MOSI_PIN = board.IO9
 # =============== End of Settings ================ #
 
-# ---------- LEDs -------------#
+# ---------- ARCADE BUTTON LEDS -------------#
 from digitalio import DigitalInOut
 from busio import SPI
 from adafruit_74hc595 import ShiftRegister74HC595
-# # Setup Button LEDs Shift Register
+# Setup Button LEDs Shift Register
 latch_pin = DigitalInOut(LATCH_PIN)
 spi = SPI(SPI_CLOCK_PIN, MOSI=SPI_MOSI_PIN)
 sr = ShiftRegister74HC595(spi, latch_pin)
@@ -48,20 +37,7 @@ from neopixel import NeoPixel
 pixels = NeoPixel(PIXELS_PIN, PIXELS_LENGTH, brightness=1, auto_write=False)
 view = ViewMulti([
 	ViewConsole(),
-	ViewTableOutline(
-		pixels,
-		seat_definitions=SEAT_DEFINITIONS,
-		brightness_normal=LED_BRIGHTNESS_NORMAL,
-		brightness_highlight=LED_BRIGHTNESS_HIGHLIGHT,
-		ease_fade=EASE_FADE,
-		ease_fade_duration=EASE_FADE_DURATION,
-		ease_warn=EASE_WARN,
-		ease_warn_duration=EASE_WARN_DURATION,
-		ease_warn_max_times=EASE_WARN_MAX_TIMES,
-		ease_line=EASE_LINE,
-		ease_line_pixels_per_seconds=EASE_LINE_PIXEL_PER_SEC,
-		comet_pixels_per_second=COMET_PIXEL_PER_SEC,
-		),
+	ViewTableOutline(pixels, seat_definitions=SEAT_DEFINITIONS),
 	ViewSeatedActionLeds(arcade_leds),
 	])
 view.set_state(GameState())

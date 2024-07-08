@@ -158,6 +158,7 @@ class SgtConnectionBluetooth(SgtConnection):
 
 	def send_queue(self) -> bool:
 		self._send(self.value_to_send)
+		self.value_to_send = None
 
 	def enqueue_send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		action = super().enqueue_send_primary(seat, on_success, on_failure)

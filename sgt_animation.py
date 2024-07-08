@@ -4,7 +4,7 @@ from easing import EasingBase
 import adafruit_fancyled.adafruit_fancyled as fancy
 from adafruit_pixelbuf import PixelBuf
 import adafruit_logging as logging
-from utils import mix
+from utils.color import mix
 log = logging.getLogger()
 
 class SgtAnimation():

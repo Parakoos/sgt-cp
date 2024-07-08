@@ -1,7 +1,7 @@
 import adafruit_logging as logging
 log = logging.getLogger()
 from time import monotonic
-from utils import find_string
+from utils.find import find_string
 
 AXIS_X = 0
 AXIS_Y = 1

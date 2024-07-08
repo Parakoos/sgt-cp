@@ -1,7 +1,6 @@
 import adafruit_logging as logging
 log = logging.getLogger()
 from game_state import GameState, STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED, STATE_RUNNING, STATE_NOT_RUNNING, STATE_SIM_TURN
-from utils import log_exception, check_if_crossed_time_border
 from time import monotonic
 
 class View():
@@ -116,3 +115,25 @@ class View():
 	def record_polling_delay(self, delay: float):
 		self.polling_delays.append(delay)
 		self.polling_delays = self.polling_delays[0:5]
+
+def check_if_crossed_time_border(time_borders: tuple[int], time_lower_bound: int, time_upper_bound: int):
+	"""Checks if we have just crossed a time border.
+	:returns: a positive integer if we have just crossed a border, showing how many borders we have crossed, or a non-positive integer showing how many seconds are left until the next border crossing
+	"""
+	i = 0
+	n = 0
+	border = 0
+	while True:
+		n = n + 1
+		border = border + time_borders[i]
+		if (time_lower_bound < border):
+			# We have found the latest boundary where we cross over with the new time.
+			if (time_upper_bound >= border):
+				return n
+			else:
+				# do nothing as we haven't just crossed the boundary.
+				return time_upper_bound - border
+
+		# Only advance the index if we are not at the last value
+		if i < len(time_borders) - 1:
+			i += 1
