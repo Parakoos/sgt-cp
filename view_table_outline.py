@@ -78,14 +78,17 @@ class ViewTableOutline(View):
 	def switch_to_end(self, state: GameState, old_state: GameState):
 		self._activate_multiplayer_animation()
 	def switch_to_no_game(self):
+		super().switch_to_no_game()
 		self.animation = SgtAnimation(
 			(RainbowComet(self.pixels, self.comet_refresh_rate, tail_length=round(len(self.pixels)/2), ring=True), None, True),
 		)
 	def switch_to_not_connected(self):
+		super().switch_to_not_connected()
 		self.animation = SgtAnimation(
 			(Comet(self.pixels, self.comet_refresh_rate, BLUE, tail_length=round(len(self.pixels)/2), ring=True), None, True),
 		)
 	def switch_to_error(self):
+		super().switch_to_error()
 		if not isinstance(self.animation, SgtErrorAnimation):
 			self.animation = SgtErrorAnimation(self)
 	def on_state_update(self, state: GameState, old_state: GameState):

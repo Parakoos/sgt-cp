@@ -43,17 +43,19 @@ class ViewMulti(View):
 		for view in self.views:
 			view.switch_to_end(state, old_state)
 	def switch_to_no_game(self):
+		super().switch_to_no_game()
 		for view in self.views:
 			view.switch_to_no_game()
 	def switch_to_not_connected(self):
+		super().switch_to_not_connected()
 		for view in self.views:
 			view.switch_to_not_connected()
 	def switch_to_error(self):
+		super().switch_to_error()
 		for view in self.views:
 			view.switch_to_error()
 	def set_state(self, state: GameState):
 		super().set_state(state)
-		self.state = state
 		for view in self.views:
 			view.set_state(state)
 	def on_time_reminder(self, time_reminder_count: int):

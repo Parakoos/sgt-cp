@@ -22,19 +22,6 @@ BUTTON_PINS = [board.BUTTON, board.D1, board.D2]
 # LATCH_PIN = board.IO44
 # SPI_CLOCK_PIN = board.IO7
 # SPI_MOSI_PIN = board.IO9
-
-WIFI_SSID = "Kvänjarp"				# Your WIFI access point name
-WIFI_PASSWORD = ""					# Your WIFI password
-# Setup your MQTT credentials here. Get them from https://sharedgametimer.com/mqtt
-SGT_USER_ID = ""
-MQTT_HOST = "c360d66cbd94454898a146a8117eb5b2.s2.eu.hivemq.cloud"
-MQTT_PORT = 8883
-MQTT_TOPIC_GAME = SGT_USER_ID + "/game"
-MQTT_TOPIC_COMMAND = SGT_USER_ID + "/commands"
-MQTT_USERNAME = "tester"
-MQTT_PASSWORD = "1 Meeple"
-MANUAL_TIME_OFFSET = -2				# Time offset in seconds to improve syncing between SGT and the MCU
-
 # =============== End of Settings ================ #
 
 # # ---------- LEDs -------------#
@@ -73,17 +60,7 @@ view.set_state(GameState())
 
 # ---------- WIFI -------------#
 from sgt_connection_mqtt import SgtConnectionMQTT
-sgt_connection = SgtConnectionMQTT(view,
-				mqtt_host=MQTT_HOST,
-				mqtt_port=MQTT_PORT,
-				mqtt_username=MQTT_USERNAME,
-				mqtt_password=MQTT_PASSWORD,
-				mqtt_topic_game=MQTT_TOPIC_GAME,
-				mqtt_topic_command=MQTT_TOPIC_COMMAND,
-				wifi_ssid=WIFI_SSID,
-				wifi_password=WIFI_PASSWORD,
-				manual_time_offset=MANUAL_TIME_OFFSET,
-)
+sgt_connection = SgtConnectionMQTT(view)
 
 # ---------- BUTTONS SETUP -------------#
 from buttons import Buttons

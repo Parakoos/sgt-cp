@@ -29,10 +29,13 @@ class ViewConsole(View):
 	def switch_to_end(self, state: GameState, old_state: GameState):
 		log.info(f"-> Game Over")
 	def switch_to_no_game(self):
+		super().switch_to_no_game()
 		log.info(f"-> No Game In Progress")
 	def switch_to_not_connected(self):
-		log.info(f"-> Not Connecting")
+		super().switch_to_not_connected()
+		log.info(f"-> Not Connected")
 	def switch_to_error(self):
+		super().switch_to_error()
 		log.info(f"-> Error")
 	def on_state_update(self, state: GameState, old_state: GameState):
 		log.info("State: %s\nTimings: %s", state, state.get_current_timings())

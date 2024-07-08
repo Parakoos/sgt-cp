@@ -65,11 +65,17 @@ class View():
 	def switch_to_end(self, state: GameState, old_state: GameState):
 		pass
 	def switch_to_no_game(self):
-		pass
+		self.state = None
+		self.time_reminder_check_timeout = 0
+		self.current_times = None
 	def switch_to_not_connected(self):
-		pass
+		self.state = None
+		self.time_reminder_check_timeout = 0
+		self.current_times = None
 	def switch_to_error(self):
-		pass
+		self.state = None
+		self.time_reminder_check_timeout = 0
+		self.current_times = None
 	def on_state_update(self, state: GameState, old_state: GameState):
 		pass
 	def on_time_reminder(self, time_reminder_count: int):
