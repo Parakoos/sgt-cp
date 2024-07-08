@@ -59,7 +59,8 @@ class SgtConnectionMQTT(SgtConnection):
 		return self.mqtt_client.is_connected()
 
 	def restart(self):
-		self.mqtt_client.disconnect()
+		if self.mqtt_client.is_connected():
+			self.mqtt_client.disconnect()
 
 	def connect(self) -> bool:
 		self.view.switch_to_not_connected()

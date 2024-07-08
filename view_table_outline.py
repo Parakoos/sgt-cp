@@ -79,10 +79,12 @@ class ViewTableOutline(View):
 		self._activate_multiplayer_animation()
 	def switch_to_no_game(self):
 		super().switch_to_no_game()
+		self.pixels.fill(BLACK)
 		self.animation = SgtAnimation(
 			(RainbowComet(self.pixels, self.comet_refresh_rate, tail_length=round(len(self.pixels)/2), ring=True), None, True),
 		)
 	def switch_to_not_connected(self):
+		self.pixels.fill(BLACK)
 		super().switch_to_not_connected()
 		self.animation = SgtAnimation(
 			(Comet(self.pixels, self.comet_refresh_rate, BLUE, tail_length=round(len(self.pixels)/2), ring=True), None, True),
@@ -192,7 +194,7 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 		for i in range(seat_count):
 			s1 = self.parent.seat_definitions[i]
 			s2 = self.parent.seat_definitions[(i+1)%seat_count]
-			self.seat_lines.append(Line(midpoint=s1[0]+s2[1], length=0, color=RED))
+			self.seat_lines.append(Line(midpoint=(s1[0]+s2[0])/2, length=0, color=RED))
 			self.seat_line_max_lengths.append(round(min(s1[1], s2[1])*self.MAX_FRACTION_OF_EDGE_FOR_PULSE))
 
 	def set_lengths(self, progress: float):
