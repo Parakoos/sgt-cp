@@ -47,12 +47,12 @@ from sgt_animation import SgtAnimation, SgtSolid
 import time
 from utils.find import find_thing
 from utils.color import DisplayedColor, BLUE as BLUE_PC, RED as RED_PC, BLACK as BLACK_PC
-from utils.transition import TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions
+from utils.transition import TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions, PropertyTransition, NoOpTransition
 from math import ceil
 import adafruit_logging as logging
 log = logging.getLogger()
 
-BLACK = BLACK_PC.base
+BLACK = BLACK_PC.black
 BLUE = BLUE_PC.highlight
 RED = RED_PC.highlight
 
@@ -165,15 +165,12 @@ class SgtSeatedAnimation():
 		self.length = len(self.pixels)
 
 		if fade_to_black:
-			tranny = TransitionFunction(FADE_EASE(self.pixels.brightness, 0, FADE_DURATION), self.set_brightness)
+			tranny = PropertyTransition(self.pixels, 'brightness', 0, FADE_EASE, PAUSE_FADE_DURATION)
 			while not tranny.loop():
 				self.pixels.show()
 			self.pixels.fill(0x0)
 			self.pixels.show()
 			self.pixels.brightness = 1
-
-	def set_brightness(self, brightness: float):
-		self.pixels.brightness = brightness
 
 	def on_state_update(self, state: GameState, old_state: GameState):
 		pass
@@ -194,7 +191,7 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 		self.seat_lines = []
 		self.seat_line_max_lengths = []
 		seat_count = len(self.parent.seat_definitions)
-		self.bg_color = BLACK
+		self.bg_color = BLACK.copy()
 		self.overall_transition = SerialTransitionFunctions([])
 		for i in range(seat_count):
 			s1 = self.parent.seat_definitions[i]
@@ -213,7 +210,7 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 				fade_out = TransitionFunction(ERROR_EASINGS[1](1, 0, ERROR_PULSE_DURATION/2), callback=self.set_lengths)
 				self.overall_transition.fns.append(fade_in)
 				self.overall_transition.fns.append(fade_out)
-			pause = TransitionFunction(FADE_EASE(0, 0, ERROR_PAUSE_TIME), callback=lambda p: p)
+			pause = NoOpTransition(ERROR_PAUSE_TIME)
 			self.overall_transition.fns.append(pause)
 
 		self.overall_transition.loop()
@@ -229,10 +226,10 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 
 	def animate(self):
 		if len(self.overall_transition.fns) == 0:
-			fade_in = TransitionFunction(FADE_EASE(0, 1, PAUSE_FADE_DURATION), callback=self.set_brightness)
-			be_bright = TransitionFunction(FADE_EASE(1, 1, max(0, PAUSE_ACTIVE_DURATION-(2*PAUSE_FADE_DURATION))), callback=self.set_brightness)
-			fade_out = TransitionFunction(FADE_EASE(1, 0, PAUSE_FADE_DURATION), callback=self.set_brightness)
-			be_dark = TransitionFunction(FADE_EASE(0, 0, PAUSE_INACTIVE_DURATION), callback=self.set_brightness)
+			fade_in = PropertyTransition(self.pixels, 'brightness', 1, FADE_EASE, PAUSE_FADE_DURATION)
+			be_bright = NoOpTransition(max(0, PAUSE_ACTIVE_DURATION-(2*PAUSE_FADE_DURATION)))
+			fade_out = PropertyTransition(self.pixels, 'brightness', 0, FADE_EASE, PAUSE_FADE_DURATION)
+			be_dark = NoOpTransition(PAUSE_INACTIVE_DURATION)
 			self.overall_transition.fns.append(fade_in)
 			self.overall_transition.fns.append(be_bright)
 			self.overall_transition.fns.append(fade_out)
@@ -266,13 +263,10 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 		self.last_animation_ts = time.monotonic()
 		self.overall_transition = SerialTransitionFunctions([])
 
-	def set_line_midpoint(self, midpoint: float, line: Line):
-		line.midpoint = midpoint % self.length
-
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 	def __init__(self, parent_view: ViewTableOutline):
 		super().__init__(parent_view)
-		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK), transitions=[]) for s in self.seat_definitions)
+		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK.copy()), transitions=[]) for s in self.seat_definitions)
 		self.blinks_left = 0
 		self.blink_transition = None
 		self.current_times = None
@@ -282,8 +276,8 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 		if self.blink_transition == None and self.blinks_left > 0:
 			self.blinks_left = self.blinks_left - 1
 			self.blink_transition = SerialTransitionFunctions([
-				TransitionFunction(TIME_REMINDER_EASINGS[0](self.pixels.brightness, 0, TIME_REMINDER_PULSE_DURATION/2), self.set_overall_brightness),
-				TransitionFunction(TIME_REMINDER_EASINGS[1](0, self.pixels.brightness, TIME_REMINDER_PULSE_DURATION/2), self.set_overall_brightness),
+				PropertyTransition(self.pixels, 'brightness', 0, TIME_REMINDER_EASINGS[0], TIME_REMINDER_PULSE_DURATION/2),
+				PropertyTransition(self.pixels, 'brightness', 1, TIME_REMINDER_EASINGS[1], TIME_REMINDER_PULSE_DURATION/2),
 			])
 		if self.blink_transition != None and self.blink_transition.loop():
 			self.blink_transition = None
@@ -299,15 +293,11 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 		self.pixels.show()
 		return has_more_transitions or self.blinks_left > 0 or self.blink_transition != None
 
-	def set_overall_brightness(self, brightness):
-		self.pixels.brightness = brightness
-	def set_line_length(self, line_length: float, seat: int):
-		self.seat_lines[seat].line.length = line_length
-
 	def on_state_update(self, state: GameState, old_state: GameState):
 		for seat, line in enumerate(self.seat_definitions):
-			seat_color = self.seat_lines[seat].line.color
-			old_line_length = self.seat_lines[seat].line.length
+			seat_line = self.seat_lines[seat].line
+			seat_color = seat_line.color
+			old_line_length = seat_line.length
 			new_color = None
 			new_line_length = line[1]
 			player = find_thing((p for p in state.players if p.seat == seat+1), None)
@@ -330,20 +320,18 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 				new_color = player.color.highlight
 
 			if seat_color == BLACK and new_color != None:
-				self.seat_lines[seat].line.length = 0
-				self.seat_lines[seat].line.color = new_color
-				self.seat_lines[seat].transitions = [TransitionFunction(FADE_EASE(0, new_line_length, FADE_DURATION), self.set_line_length, seat)]
+				seat_line.length = 0
+				seat_line.color = new_color
+				self.seat_lines[seat].transitions = [PropertyTransition(seat_line, 'length', new_line_length, FADE_EASE, FADE_DURATION)]
 			elif seat_color != BLACK and new_color == None:
-				self.seat_lines[seat].transitions = [TransitionFunction(FADE_EASE(old_line_length, 0, FADE_DURATION), self.set_line_length, seat)]
+				self.seat_lines[seat].transitions = [PropertyTransition(seat_line, 'length', 0, FADE_EASE, FADE_DURATION)]
 			elif seat_color != BLACK and (seat_color != new_color or old_line_length != new_line_length):
 				trannies = []
 				if seat_color != new_color:
 					trannies.append(ColorTransitionFunction(seat_color, new_color, FADE_EASE(0, 1, FADE_DURATION)))
 				if old_line_length != new_line_length:
-					trannies.append(TransitionFunction(FADE_EASE(old_line_length, new_line_length, FADE_DURATION), self.set_line_length, seat))
+					trannies.append(PropertyTransition(seat_line, 'length', new_line_length, FADE_EASE, FADE_DURATION))
 				self.seat_lines[seat].transitions = [ParallellTransitionFunctions(*trannies)]
-		while self.animate():
-			pass
 
 	def on_time_reminder(self, time_reminder_count: int):
 		self.blinks_left = min(time_reminder_count, TIME_REMINDER_MAX_PULSES)
@@ -356,7 +344,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 
 	def __init__(self, parent_view: ViewTableOutline):
 		super().__init__(parent_view)
-		self.color_background = BLACK
+		self.color_background = BLACK.copy()
 		self.seat_line = None
 		self.blinks_left = 0
 		self.blink_transition = None
@@ -379,15 +367,11 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		if len(self.seat_line.transitions) > 0:
 			if(self.seat_line.transitions[0].loop()):
 				self.seat_line.transitions = self.seat_line.transitions[1:]
+				self.seat_line.line.midpoint = self.seat_line.line.midpoint % self.length
 		self.pixels.fill(self.color_background.current_color)
 		self.draw_line(self.seat_line.line)
 		self.pixels.show()
 		return len(self.seat_line.transitions) > 0 or self.blinks_left > 0 or self.blink_transition != None
-
-	def set_line_midpoint(self, midpoint: float):
-		self.seat_line.line.midpoint = midpoint % self.length
-	def set_line_length(self, length: float):
-		self.seat_line.line.length = length
 
 	def on_state_update(self, state: GameState, old_state: GameState):
 		active_player = state.get_active_player()
@@ -405,7 +389,8 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		self.player_bg_color = active_player.color.dim if state.state == 'pl' else None
 		self.player_fg_color = active_player.color.highlight
 
-		from_pixel = self.seat_line.line.midpoint
+		line = self.seat_line.line
+		from_pixel = line.midpoint
 		to_pixel = player_line_midpoint
 		line_ease_duration = FADE_DURATION
 		line_ease = FADE_EASE
@@ -415,13 +400,13 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			line_ease_duration = min(steps_if_adding, steps_if_subtracting)/HIGHLIGHT_MOVE_SPEED_PPS
 			line_ease = HIGHLIGHT_MOVE_EASE
 			if (steps_if_adding <= steps_if_subtracting):
-				line_transitions.append(TransitionFunction(line_ease(start=from_pixel, end=from_pixel+steps_if_adding, duration=line_ease_duration), callback=self.set_line_midpoint))
+				line_transitions.append(PropertyTransition(line, 'midpoint', from_pixel+steps_if_adding, line_ease, line_ease_duration))
 			else:
-				line_transitions.append(TransitionFunction(line_ease(start=from_pixel, end=from_pixel-steps_if_subtracting, duration=line_ease_duration), callback=self.set_line_midpoint))
-		if self.seat_line.line.color != self.player_fg_color:
-			line_transitions.append(ColorTransitionFunction(self.seat_line.line.color, self.player_fg_color, line_ease(duration=line_ease_duration)))
-		if self.seat_line.line.length != player_line_length:
-			line_transitions.append(TransitionFunction(line_ease(start=self.seat_line.line.length, end=player_line_length, duration=line_ease_duration), callback=self.set_line_length))
+				line_transitions.append(PropertyTransition(line, 'midpoint', from_pixel-steps_if_subtracting, line_ease, line_ease_duration))
+		if line.color != self.player_fg_color:
+			line_transitions.append(ColorTransitionFunction(line.color, self.player_fg_color, line_ease(duration=line_ease_duration)))
+		if line.length != player_line_length:
+			line_transitions.append(PropertyTransition(line, 'length', player_line_length, line_ease, line_ease_duration))
 
 		if from_pixel != to_pixel:
 			# We want to first fade out the current background color to black,
@@ -440,9 +425,6 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				self.seat_line.transitions.append(ParallellTransitionFunctions(*line_transitions))
 			if self.color_background != self.player_bg_color:
 				self.seat_line.transitions.append(ColorTransitionFunction(self.color_background, self.player_bg_color, easing=FADE_EASE(0, 1, FADE_DURATION)))
-
-		while self.animate():
-			pass
 
 	def on_time_reminder(self, time_reminder_count: int):
 		self.blinks_left = min(time_reminder_count, TIME_REMINDER_MAX_PULSES)

@@ -37,6 +37,29 @@ class DisplayedColor():
 		self.fancy_color = fancy_color
 		self.brightness = rounded_brightness
 
+	def copy(self):
+		return DisplayedColor(self.fancy_color, self.brightness)
+
+	def is_black(self):
+		if self.brightness == 0:
+			return True
+		if isinstance(self.fancy_color, fancy.CRGB):
+			return self.fancy_color.red == 0 and self.fancy_color.green == 0 and self.fancy_color.blue == 0
+		if isinstance(self.fancy_color, fancy.CHSV):
+			return self.fancy_color.value
+
+	def __eq__(self, value: object) -> bool:
+		if isinstance(value, DisplayedColor):
+			if self.brightness != value.brightness:
+				return False
+			if isinstance(self.fancy_color, fancy.CRGB):
+				return isinstance(value.fancy_color, fancy.CRGB) and self.fancy_color.red == value.fancy_color.red and self.fancy_color.green == value.fancy_color.green and self.fancy_color.blue == value.fancy_color.blue
+			if isinstance(self.fancy_color, fancy.CHSV):
+				return isinstance(value.fancy_color, fancy.CHSV) and self.fancy_color.hue == value.fancy_color.hue and self.fancy_color.saturation == value.fancy_color.saturation and self.fancy_color.value == value.fancy_color.value
+			raise Exception('Invalid fancy color type: %s', type(self.fancy_color))
+		else:
+			return False
+
 	def __repr__(self):
 		return  f'{hex(self.current_color)}'
 
