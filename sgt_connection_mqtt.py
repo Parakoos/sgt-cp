@@ -119,10 +119,12 @@ class SgtConnectionMQTT(SgtConnection):
 		self.view.record_polling_delay(time.monotonic() - start_ts)
 
 	def handle_new_messages(self) -> None:
-		if self.latest_message != None:
-			game_state = GameState(json_state_string=self.latest_message, timestamp_offset=self.unix_time_offset)
-			self.latest_message = None
-			self.view.set_state(game_state)
+		if self.latest_message == None:
+			return False
+		game_state = GameState(json_state_string=self.latest_message, timestamp_offset=self.unix_time_offset)
+		self.latest_message = None
+		self.view.set_state(game_state)
+		return True
 
 	def _lookup_unix_time_offset(self):
 		if self.unix_time_offset != 0:

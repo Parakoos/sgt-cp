@@ -4,13 +4,24 @@ import json
 import time
 from utils.find import find_thing
 from utils.log import log_exception
+from utils.color import PlayerColor, WHITE
 
 def get_state_int(state, key, default=0):
 	return int(state[key]) if key in state and state[key] != None and state[key] != "" else default
 
-def get_state_color(state, key, default=(255,255,255)):
+color_cache_old = dict()
+color_cache_new = dict()
+def get_state_color(state, key, default=WHITE) -> PlayerColor:
 	color_hex = get_state_string(state, key, '')
-	return ((int(color_hex[0:2],16),int(color_hex[2:4],16),int(color_hex[4:6],16))) if len(color_hex) == 6 else default
+	if len(color_hex) != 6:
+		return default
+	if color_hex in color_cache_old:
+		color = color_cache_old[color_hex]
+	else:
+		color = PlayerColor(color_hex)
+		color_cache_old[color_hex] = color
+	color_cache_new[color_hex] = color_cache_old[color_hex]
+	return color
 
 def get_state_string(state, key, default=""):
 	return state[key] if key in state and state[key] != None and len(state[key].strip()) > 0 else default
@@ -84,9 +95,11 @@ TIMER_MODE_NO_TIMER = 'nt'
 class GameState():
 
 	def __init__(self,
-				ble_state_string: str = None, ble_field_order: list[str] = None, ble_field_divider: str = None,
-				json_state_string: str = None,
+				ble_state_string: str|None = None, ble_field_order: list[str]|None = None, ble_field_divider: str|None = None,
+				json_state_string: str|None = None,
 				timestamp_offset = 0):
+		global color_cache_old, color_cache_new
+		color_cache_new = dict()
 		state = {}
 		if (json_state_string != None):
 			try:
@@ -210,11 +223,12 @@ class GameState():
 			self.time_reminders = None
 
 		self.current_times = None
+		color_cache_old = color_cache_new
 
 	def has_action(self, action):
 		return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
-	def get_active_player(self):
+	def get_active_player(self) -> Player | None:
 		if len(self.seat) == 1:
 			return next((p for p in self.players if p.seat in self.seat))
 		elif len(self.seat) == 0:

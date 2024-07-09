@@ -25,7 +25,8 @@ class SgtConnection:
 		return None
 
 	def handle_new_messages(self) -> None:
-		pass
+		"Return true if any messages were dealt with"
+		return False
 
 	def restart(self) -> None:
 		pass

@@ -131,15 +131,17 @@ class SgtConnectionBluetooth(SgtConnection):
 				self.incomplete_line_read = last_item
 				time.sleep(0.05)
 	def handle_new_messages(self) -> None:
-		if self.line_to_process != None:
-			new_state = GameState(
-				ble_state_string = self.line_to_process[1],
-				ble_field_order = self.field_order,
-				ble_field_divider = self.field_divider,
-				timestamp_offset = self.line_to_process[0] - time.monotonic()
-				)
-			self.line_to_process = None
-			self.view.set_state(new_state)
+		if self.line_to_process == None:
+			return False
+		new_state = GameState(
+			ble_state_string = self.line_to_process[1],
+			ble_field_order = self.field_order,
+			ble_field_divider = self.field_divider,
+			timestamp_offset = self.line_to_process[0] - time.monotonic()
+			)
+		self.line_to_process = None
+		self.view.set_state(new_state)
+		return True
 	def _send(self, value: str|None):
 		if value == None:
 			return

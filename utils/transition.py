@@ -1,6 +1,9 @@
+import adafruit_logging as logging
+log = logging.getLogger()
 from time import monotonic
 from easing import EasingBase
-from utils.color import mix
+from utils.color import DisplayedColor
+import adafruit_fancyled.adafruit_fancyled as fancy
 
 class TransitionFunction():
 	def __init__(self, easing: EasingBase, callback: callable[[float, any], None], callback_data: any = None) -> None:
@@ -25,24 +28,23 @@ class TransitionFunction():
 		return self.easing.duration == elapsed_time
 
 class ColorTransitionFunction():
-	def __init__(self, from_color: tuple[int,int,int], to_color: tuple[int,int,int], easing: EasingBase, callback: callable[[tuple[int,int,int], any|None], None], callback_data: any = None) -> None:
+	def __init__(self, from_color: DisplayedColor, to_color: DisplayedColor, easing: EasingBase) -> None:
 		self.start_time = None
 		self.easing = easing
-		self.callback = callback
-		self.callback_data = callback_data
-		self.from_color = from_color
-		self.to_color = to_color
+		self.starting_fancy = from_color.fancy_color
+		self.starting_brightness = from_color.brightness
+		self.target_fancy = to_color.fancy_color
+		self.target_brightness = to_color.brightness
+		self.color_to_update = from_color
 
 	def loop(self):
 		if self.start_time == None:
 			self.start_time = monotonic()
 		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
 		progress = self.easing.ease(elapsed_time)
-		mixed_color = mix(self.from_color, self.to_color, progress)
-		if self.callback_data != None:
-			self.callback(mixed_color, self.callback_data)
-		else:
-			self.callback(mixed_color)
+		new_fancy = fancy.mix(self.starting_fancy, self.target_fancy, progress) if self.starting_fancy != self.target_fancy else self.starting_fancy
+		new_brightness = round(self.starting_brightness * (1-progress) + self.target_brightness * progress, 2)
+		self.color_to_update.update(new_fancy, new_brightness)
 		return self.easing.duration == elapsed_time
 
 class ParallellTransitionFunctions():

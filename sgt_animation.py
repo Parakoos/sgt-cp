@@ -1,19 +1,20 @@
 import time
 from adafruit_led_animation.animation import Animation
 from easing import EasingBase
-import adafruit_fancyled.adafruit_fancyled as fancy
+from utils.color import DisplayedColor
+from utils.transition import ColorTransitionFunction
 from adafruit_pixelbuf import PixelBuf
 import adafruit_logging as logging
-from utils.color import mix
 log = logging.getLogger()
 
 class SgtAnimation():
-	def __init__(self, *members: tuple[Animation, float|int|None, bool], color: int|None = None) -> None:
+	def __init__(self, color: DisplayedColor, *members: tuple[Animation, float|int|None, bool]) -> None:
 		self.members = members
 		self.current_index = -1
 		self.animation_start_ts = 0
 		self.timed_by_cycles = False
-		self.color=members[0][0].color
+		self.color=color.current_color
+		self.displayed_color = color
 		self.transition = None
 		self.next()
 
@@ -21,8 +22,7 @@ class SgtAnimation():
 		self.current_index = (self.current_index + 1) % len(self.members)
 		animation, animation_timing, interruptable = self.members[self.current_index]
 		animation.reset()
-		if self.color:
-			animation.color = self.color
+		animation.color = self.displayed_color.current_color
 		self.timed_by_cycles = animation.on_cycle_complete_supported
 		if self.timed_by_cycles:
 			animation.cycle_count = 0
@@ -32,13 +32,9 @@ class SgtAnimation():
 	def animate(self, show=True) -> bool:
 		animation, animation_timing, interruptable = self.members[self.current_index]
 		if self.transition:
-			easing, start_time, start_color, target_color = self.transition
-			elapsed_time = time.monotonic() - start_time
-			fade_progress = easing.ease(elapsed_time)
-			color = mix(start_color, target_color, fade_progress)
-			self.set_color(color)
-			if elapsed_time >= easing.duration:
+			if self.transition.loop():
 				self.transition = None
+			self.set_color(self.displayed_color.current_color)
 
 		animation.animate(show)
 		if animation_timing == None:
@@ -52,9 +48,9 @@ class SgtAnimation():
 				self.next()
 		return not(self.transition == None and self.members[self.current_index][2])
 
-	def set_color(self, color: tuple[int,int,int], transition: EasingBase = None):
+	def set_color(self, color: DisplayedColor, transition: EasingBase|None = None):
 		if transition:
-			self.transition = (transition, time.monotonic(), self.color, color)
+			self.transition = ColorTransitionFunction[self.displayed_color, color, transition]
 		else:
 			self.color = color
 			self.members[self.current_index][0].color = color
@@ -72,8 +68,8 @@ class SgtAnimationGroup():
 		return busy_animating
 
 class SgtSolid(Animation):
-	def __init__(self, pixel_object, speed, color, name=None):
-		super().__init__(pixel_object, speed, color, peers=None, paused=False, name=name)
+	def __init__(self, pixel_object: PixelBuf, color: int):
+		super().__init__(pixel_object, 0.01, color)
 
 	def draw(self):
 		self.pixel_object.fill(self.color)

@@ -5,7 +5,6 @@ from sgt_connection import SgtConnection
 from view import View
 from buttons import Buttons
 from microcontroller import Pin
-import time
 
 def main_loop(
 		connection: SgtConnection,
@@ -14,7 +13,6 @@ def main_loop(
 		on_error: callable[[Exception], None] = None,
 		loops: tuple[callable[[None], bool]] = (),
 		):
-	mem_ts = time.monotonic()
 	is_polling = None
 	while True:
 		try:
@@ -42,10 +40,8 @@ def main_loop(
 					is_polling = True
 				if is_polling:
 					connection.poll_for_new_messages()
-				connection.handle_new_messages()
-				if time.monotonic() - mem_ts > 10:
-					log_memory_usage('End of Loop')
-					mem_ts = time.monotonic()
+				if connection.handle_new_messages():
+					log_memory_usage('After Game State Update')
 			log.debug('-------------------- DISCONNECTED --------------------')
 		except Exception as e:
 			log_exception(e)
