@@ -1,15 +1,16 @@
-# ----- settings.toml ----- #
+from utils.settings import get_int, get_float, get_ease, get_string
 # The connection details of your home WIFI.
-# CIRCUITPY_WIFI_SSID=""
-# CIRCUITPY_WIFI_PASSWORD=""
+WIFI_SSID = get_string('CIRCUITPY_WIFI_SSID')
+WIFI_PASSWORD = get_string('CIRCUITPY_WIFI_PASSWORD')
 
 # Get the following values from https://sharedgametimer.com/mqtt
-# MQTT_SGT_USER_ID = ""			# The bit before '/command' and '/game' topics.
-# MQTT_HOST = "example.com"
-# MQTT_PORT = 8883
-# MQTT_USERNAME = ""
-# MQTT_PASSWORD = ""
-# MQTT_MANUAL_TIME_OFFSET = -2	# Optional time offset in seconds to improve syncing between SGT and the MCU
+SGT_USER_ID = get_string('MQTT_SGT_USER_ID') # The bit before '/command' and '/game' topics.
+MQTT_HOST = get_string('MQTT_HOST')
+MQTT_PORT = get_int('MQTT_PORT')
+MQTT_USERNAME = get_string('MQTT_USERNAME')
+MQTT_PASSWORD = get_string('MQTT_PASSWORD')
+# Optional time offset in seconds to improve syncing between SGT and the MCU
+MQTT_MANUAL_TIME_OFFSET = get_int('MQTT_MANUAL_TIME_OFFSET', 0)
 
 import adafruit_logging as logging
 log = logging.getLogger()
@@ -28,21 +29,19 @@ import os
 class SgtConnectionMQTT(SgtConnection):
 	def __init__(self, view: View):
 		super().__init__(view)
-		sgt_user_id = os.getenv("MQTT_SGT_USER_ID")
-		self.mqtt_topic_game = f"{sgt_user_id}/game"
-		self.mqtt_topic_command = f"{sgt_user_id}/commands"
+		self.mqtt_topic_game = f"{SGT_USER_ID}/game"
+		self.mqtt_topic_command = f"{SGT_USER_ID}/commands"
 		self.last_poll_ts = -1000
 		self.unix_time_offset = 0
-		self.manual_time_offset = os.getenv("MQTT_MANUAL_TIME_OFFSET", 0)
-		wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
+		wifi.radio.connect(WIFI_SSID, WIFI_PASSWORD)
 		pool = socketpool.SocketPool(wifi.radio)
 		ssl_context = ssl.create_default_context()
 		self.session = Session(pool, ssl_context)
 		self.mqtt_client = ADA_MQTT(
-			broker=os.getenv("MQTT_HOST"),
-			port=os.getenv("MQTT_PORT"),
-			username=os.getenv("MQTT_USERNAME"),
-			password=os.getenv("MQTT_PASSWORD"),
+			broker=MQTT_HOST,
+			port=MQTT_PORT,
+			username=MQTT_USERNAME,
+			password=MQTT_PASSWORD,
 			socket_pool=pool,
 			ssl_context=ssl_context,
 			is_ssl=True,
@@ -137,7 +136,7 @@ class SgtConnectionMQTT(SgtConnection):
 			time_unix_sec = json['unixtime']
 			diff = now - time_unix_sec
 			log.info(f"Current Unix Time: {time_unix_sec} at mono {now} (diff: {diff})")
-			self.unix_time_offset = diff + self.manual_time_offset
+			self.unix_time_offset = diff + MQTT_MANUAL_TIME_OFFSET
 
 	def enqueue_send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_send(super().enqueue_send_primary(seat, on_success, on_failure), seat=seat)
