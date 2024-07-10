@@ -2,7 +2,7 @@ import adafruit_logging as logging
 log = logging.getLogger()
 from time import monotonic
 from easing import EasingBase
-from utils.color import DisplayedColor
+from utils.color import DisplayedColor, BLACK
 import adafruit_fancyled.adafruit_fancyled as fancy
 
 class TransitionFunction():
@@ -60,7 +60,7 @@ class ColorTransitionFunction():
 	def __init__(self, from_color: DisplayedColor, to_color: DisplayedColor, easing: EasingBase) -> None:
 		self.start_time = None
 		self.easing = easing
-		self.target_color = to_color
+		self.target_color = to_color if to_color != None else BLACK.black
 		self.color_to_update = from_color
 
 	def loop(self):
@@ -79,9 +79,26 @@ class ColorTransitionFunction():
 			else:
 				self.target_fancy = self.target_color.fancy_color
 				self.target_brightness = self.target_color.brightness
+
+			self.hsv_transition = isinstance(self.starting_fancy, fancy.CHSV) and isinstance(self.target_fancy, fancy.CHSV)
+			if self.hsv_transition:
+				self.starting_hue = self.starting_fancy.hue
+				distance_if_adding = (self.target_fancy.hue-self.starting_hue) % 1
+				distance_if_subtracting = (self.starting_hue-self.target_fancy.hue) % 1
+				if (distance_if_adding <= distance_if_subtracting):
+					self.target_hue = self.starting_hue + distance_if_adding
+				else:
+					self.target_hue = self.starting_hue - distance_if_subtracting
 		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
 		progress = self.easing.ease(elapsed_time)
-		new_fancy = fancy.mix(self.starting_fancy, self.target_fancy, progress) if self.starting_fancy != self.target_fancy else self.starting_fancy
+		if self.hsv_transition:
+			anti_progress = (1-progress)
+			h = (progress * self.target_hue + anti_progress * self.starting_hue) % 1
+			s = progress * self.target_fancy.saturation + anti_progress * self.starting_fancy.saturation
+			v = progress * self.target_fancy.value + anti_progress * self.starting_fancy.value
+			new_fancy = fancy.CHSV(h,s,v)
+		else:
+			new_fancy = fancy.mix(self.starting_fancy, self.target_fancy, progress) if self.starting_fancy != self.target_fancy else self.starting_fancy
 		new_brightness = round(self.starting_brightness * (1-progress) + self.target_brightness * progress, 2)
 		self.color_to_update.update(new_fancy, new_brightness)
 		return self.easing.duration == elapsed_time

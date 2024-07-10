@@ -11,14 +11,15 @@ def get_state_int(state, key, default=0):
 
 color_cache_old = dict()
 color_cache_new = dict()
-def get_state_color(state, key, default=WHITE) -> PlayerColor:
+def get_state_color(state, keyRgb, keyHsv, default=WHITE) -> PlayerColor:
+	key = keyHsv if keyHsv in state else keyRgb
 	color_hex = get_state_string(state, key, '')
 	if len(color_hex) != 6:
 		return default
 	if color_hex in color_cache_old:
 		color = color_cache_old[color_hex]
 	else:
-		color = PlayerColor(color_hex)
+		color = PlayerColor(color_hex, key == keyHsv)
 		color_cache_old[color_hex] = color
 	color_cache_new[color_hex] = color_cache_old[color_hex]
 	return color
@@ -48,7 +49,7 @@ class Player():
 		self.name = get_state_string(playerState, 'name', default=None)
 		self.seat = get_state_int(playerState, 'seat', default=None)
 		self.action = get_state_string(playerState, 'action', default=None)
-		self.color = get_state_color(playerState, 'color')
+		self.color = get_state_color(playerState, 'color', 'colorHsv')
 
 	def __repr__(self):
 		if self.action == '':
@@ -116,6 +117,7 @@ class GameState():
 			simple_mappings = [
 				('sgtTimerMode', 'timerMode'),
 				('sgtColor', 'color'),
+				('sgtColorHsv', 'colorHsv'),
 				('sgtTurnTime', 'turnTime'),
 				('sgtState', 'state'),
 				('sgtName', 'name'),
@@ -130,6 +132,7 @@ class GameState():
 				('sgtGameStateVersion', 'gameStateVersion'),
 				('sgtPlayerActions', 'playerActions'),
 				('sgtPlayerColors', 'playerColors'),
+				('sgtPlayerColorsHsv', 'playerColorsHsv'),
 				('sgtPlayerNames', 'playerNames'),
 				('sgtPlayerSeats', 'playerSeats'),
 			]
@@ -149,6 +152,7 @@ class GameState():
 			players = None
 			sgtPlayerActions = values[ble_field_order.index('sgtPlayerActions')].split(',') if 'sgtPlayerActions' in ble_field_order else None
 			sgtPlayerColors = values[ble_field_order.index('sgtPlayerColors')].split(',') if 'sgtPlayerColors' in ble_field_order else None
+			sgtPlayerColorsHsv = values[ble_field_order.index('sgtPlayerColorsHsv')].split(',') if 'sgtPlayerColorsHsv' in ble_field_order else None
 			sgtPlayerNames = values[ble_field_order.index('sgtPlayerNames')].split(',') if 'sgtPlayerNames' in ble_field_order else None
 			sgtPlayerSeats = values[ble_field_order.index('sgtPlayerSeats')].split(',') if 'sgtPlayerSeats' in ble_field_order else None
 			nonNullPlayerArr = sgtPlayerActions or sgtPlayerColors or sgtPlayerNames or sgtPlayerSeats or None
@@ -160,6 +164,9 @@ class GameState():
 				if sgtPlayerColors:
 					for index, val in enumerate(sgtPlayerColors):
 						players[index]['color'] = val
+				if sgtPlayerColorsHsv:
+					for index, val in enumerate(sgtPlayerColorsHsv):
+						players[index]['colorHsv'] = val
 				if sgtPlayerNames:
 					for index, val in enumerate(sgtPlayerNames):
 						players[index]['name'] = val
@@ -196,7 +203,7 @@ class GameState():
 		self.name = get_state_string(state, 'name', "(no name)")
 
 		# (not sand) The current or next-up player color
-		self.color = get_state_color(state, 'color')
+		self.color = get_state_color(state, 'color', 'colorHsv')
 
 		# Different actions. Either None or a string starting with 'game/{action}' that
 		# can be sent to the MQTT commands queue to issue commands

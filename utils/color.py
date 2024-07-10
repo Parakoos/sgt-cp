@@ -10,8 +10,9 @@ import adafruit_logging as logging
 log = logging.getLogger()
 
 class PlayerColor():
-	def __init__(self, color_hex: str) -> None:
-		self.fancy = fancy.unpack(int(color_hex,16))
+	def __init__(self, color_hex: str, hsv=False) -> None:
+		rgbOrHsv = [int(color_hex[0:2],16), int(color_hex[2:4],16), int(color_hex[2:4],16)]
+		self.fancy = fancy.CHSV(*rgbOrHsv) if hsv else fancy.CRGB(*rgbOrHsv)
 		self.black = DisplayedColor(self.fancy, 0.0)
 		self.base = DisplayedColor(self.fancy, 1.0)
 		self.dim = DisplayedColor(self.fancy, LED_BRIGHTNESS_NORMAL)
@@ -46,7 +47,7 @@ class DisplayedColor():
 		if isinstance(self.fancy_color, fancy.CRGB):
 			return self.fancy_color.red == 0 and self.fancy_color.green == 0 and self.fancy_color.blue == 0
 		if isinstance(self.fancy_color, fancy.CHSV):
-			return self.fancy_color.value
+			return self.fancy_color.value == 0.0
 
 	def __eq__(self, value: object) -> bool:
 		if isinstance(value, DisplayedColor):
@@ -63,7 +64,7 @@ class DisplayedColor():
 	def __repr__(self):
 		return  f'{hex(self.current_color)}'
 
-WHITE = PlayerColor('ffffff')
-BLACK = PlayerColor('000000')
-BLUE = PlayerColor('0000ff')
-RED = PlayerColor('ff0000')
+WHITE = PlayerColor('0000ff', True)
+BLACK = PlayerColor('000000', True)
+BLUE = PlayerColor('aaffff', True)
+RED = PlayerColor('00ffff', True)
