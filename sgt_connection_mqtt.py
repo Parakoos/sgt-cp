@@ -90,7 +90,7 @@ class SgtConnectionMQTT(SgtConnection):
 		if self.command_to_send == None:
 			return False
 		else:
-			self._send(*self.command_to_send[0])
+			self._send(*self.command_to_send)
 			self.command_to_send = None
 			return True
 
