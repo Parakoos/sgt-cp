@@ -28,7 +28,7 @@ class SgtConnectionBluetooth(SgtConnection):
 		self.text_read = ''
 		self.last_line_executed = None
 		self.byte_array = bytearray(20)
-		self.value_to_send = None
+		self.command_to_send = None
 		self.line_to_process = None
 		self.field_order = field_order
 		self.field_divider = field_divider
@@ -154,40 +154,44 @@ class SgtConnectionBluetooth(SgtConnection):
 			while self.view.animate():
 				pass
 
-	def _enqueue_send(self, value: str):
+	def _enqueue_command(self, value: str):
 		if value != None:
-			self.value_to_send = value
+			self.command_to_send = value
 
-	def send_queue(self) -> bool:
-		self._send(self.value_to_send)
-		self.value_to_send = None
+	def send_command(self) -> bool:
+		if self.command_to_send == None:
+			return False
+		else:
+			self._send(self.command_to_send)
+			self.command_to_send = None
+			return True
 
 	def enqueue_send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		action = super().enqueue_send_primary(seat, on_success, on_failure)
 		if action != None and seat != None:
-			self._enqueue_send(f'{action} #{seat}')
+			self._enqueue_command(f'{action} #{seat}')
 		else:
-			self._enqueue_send(action)
+			self._enqueue_command(action)
 	def enqueue_send_secondary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		action = super().enqueue_send_secondary(seat, on_success, on_failure)
 		if action != None and seat != None:
-			self._enqueue_send(f'{action} #{seat}')
+			self._enqueue_command(f'{action} #{seat}')
 		else:
-			self._enqueue_send(action)
+			self._enqueue_command(action)
 	def enqueue_send_toggle_admin(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_toggle_admin(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_toggle_admin(on_success, on_failure))
 	def enqueue_send_admin_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_admin_on(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_admin_on(on_success, on_failure))
 	def enqueue_send_admin_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_admin_off(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_admin_off(on_success, on_failure))
 	def enqueue_send_toggle_pause(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_toggle_pause(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_toggle_pause(on_success, on_failure))
 	def enqueue_send_pause_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_pause_on(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_pause_on(on_success, on_failure))
 	def enqueue_send_pause_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_pause_off(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_pause_off(on_success, on_failure))
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_undo(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
 
 	def _poll_for_latest_state(self):
 		log.debug('Polling for new data')

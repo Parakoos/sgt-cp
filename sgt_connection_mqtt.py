@@ -45,13 +45,14 @@ class SgtConnectionMQTT(SgtConnection):
 			socket_pool=pool,
 			ssl_context=ssl_context,
 			is_ssl=True,
+			socket_timeout=0,
 		)
 		self.mqtt_client.on_connect = self._on_connected
 		self.mqtt_client.on_disconnect = self._on_disconnected
 		self.mqtt_client.on_message = self._on_message
 		self.mqtt_client.on_subscribe = self._on_subscribe
 		self.mqtt_client.enable_logger(logging, log_level=20, logger_name="mqtt")
-		self.queue = []
+		self.command_to_send = None
 		self.latest_message = None
 
 	def is_connected(self):
@@ -81,17 +82,17 @@ class SgtConnectionMQTT(SgtConnection):
 		log.info(f"MQTT message: {message}")
 		self.latest_message = message
 
-	def _enqueue_send(self, value: str, seat: int|None = None):
+	def _enqueue_command(self, value: str, seat: int|None = None):
 		if value != None:
-			self.queue.append((value, seat))
+			self.command_to_send = (value, seat)
 
-	def send_queue(self) -> bool:
-		if len(self.queue) == 0:
+	def send_command(self) -> bool:
+		if self.command_to_send == None:
 			return False
-		while self.queue:
-			value, seat = self.queue.pop(0)
-			self._send(value, seat)
-		return True
+		else:
+			self._send(*self.command_to_send[0])
+			self.command_to_send = None
+			return True
 
 	def _send(self, value: str, seat: int|None = None):
 		if value == None:
@@ -115,7 +116,7 @@ class SgtConnectionMQTT(SgtConnection):
 		if not self.mqtt_client.is_connected():
 			self.connect()
 		start_ts = time.monotonic()
-		self.mqtt_client.loop(1)
+		self.mqtt_client.loop(0)
 		self.view.record_polling_delay(time.monotonic() - start_ts)
 
 	def handle_new_messages(self) -> None:
@@ -141,20 +142,20 @@ class SgtConnectionMQTT(SgtConnection):
 			self.unix_time_offset = diff + MQTT_MANUAL_TIME_OFFSET
 
 	def enqueue_send_primary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_primary(seat, on_success, on_failure), seat=seat)
+		self._enqueue_command(super().enqueue_send_primary(seat, on_success, on_failure), seat=seat)
 	def enqueue_send_secondary(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_secondary(seat, on_success, on_failure), seat=seat)
+		self._enqueue_command(super().enqueue_send_secondary(seat, on_success, on_failure), seat=seat)
 	def enqueue_send_toggle_admin(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_toggle_admin(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_toggle_admin(on_success, on_failure))
 	def enqueue_send_admin_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_admin_on(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_admin_on(on_success, on_failure))
 	def enqueue_send_admin_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_admin_off(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_admin_off(on_success, on_failure))
 	def enqueue_send_toggle_pause(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_toggle_pause(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_toggle_pause(on_success, on_failure))
 	def enqueue_send_pause_on(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_pause_on(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_pause_on(on_success, on_failure))
 	def enqueue_send_pause_off(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_pause_off(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_pause_off(on_success, on_failure))
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_send(super().enqueue_send_undo(on_success, on_failure))
+		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))

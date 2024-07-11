@@ -13,7 +13,6 @@ def main_loop(
 		on_error: callable[[Exception], None] = None,
 		loops: tuple[callable[[None], bool]] = (),
 		):
-	is_polling = None
 	while True:
 		try:
 			log_memory_usage('Start of Loop')
@@ -28,18 +27,8 @@ def main_loop(
 				busy = view.animate()
 				for loop in loops:
 					busy = busy or loop() # Each loop (and view.animate) should return True if it should block polling
-				messages_sent = connection.send_queue()
-				if busy and is_polling:
-					log.debug('======== DISABLE POLLING ========')
-					is_polling = False
-				elif not busy and not is_polling:
-					log.debug('======== ENABLE POLLING ========')
-					is_polling = True
-				elif messages_sent and not is_polling:
-					log.debug('======== POLLING BECAUSE OF MESSAGE SENT ========')
-					is_polling = True
-				if is_polling:
-					connection.poll_for_new_messages()
+				messages_sent = connection.send_command()
+				connection.poll_for_new_messages()
 				if connection.handle_new_messages():
 					log_memory_usage('After Game State Update')
 			log.debug('-------------------- DISCONNECTED --------------------')
