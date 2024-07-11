@@ -64,6 +64,8 @@ class ColorTransitionFunction():
 		self.color_to_update = from_color
 
 	def loop(self):
+		if self.target_color == self.color_to_update:
+			return True
 		if self.start_time == None:
 			self.start_time = monotonic()
 			if self.color_to_update.is_black():

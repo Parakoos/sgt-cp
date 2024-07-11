@@ -80,16 +80,30 @@ class DisplayedColor():
 		if isinstance(value, DisplayedColor):
 			if self.brightness != value.brightness:
 				return False
-			if isinstance(self.fancy_color, fancy.CRGB):
-				return isinstance(value.fancy_color, fancy.CRGB) and self.fancy_color.red == value.fancy_color.red and self.fancy_color.green == value.fancy_color.green and self.fancy_color.blue == value.fancy_color.blue
-			if isinstance(self.fancy_color, fancy.CHSV):
-				return isinstance(value.fancy_color, fancy.CHSV) and self.fancy_color.hue == value.fancy_color.hue and self.fancy_color.saturation == value.fancy_color.saturation and self.fancy_color.value == value.fancy_color.value
-			raise Exception('Invalid fancy color type: %s', type(self.fancy_color))
+			elif self.is_black() and value.is_black():
+				return True
+			else:
+				return equally_fancy(self.fancy_color, value.fancy_color)
 		else:
 			return False
 
 	def __repr__(self):
 		return  f'{hex(self.current_color)}'
+
+def equally_fancy(f1: fancy.CRGB|fancy.CHSV, f2: fancy.CRGB|fancy.CHSV):
+	if f1 is f2:
+		return True
+	if isinstance(f1, fancy.CHSV) and isinstance(f2, fancy.CHSV):
+		if f1.value == 0.0:
+			return f1.value == f2.value
+		elif f1.saturation == 0.0:
+			return f1.saturation == f2.saturation and f1.value == f2.value
+		else:
+			return f1.hue == f2.hue and f1.saturation == f2.saturation and f1.value == f2.value
+	elif isinstance(f1, fancy.CRGB) and isinstance(f2, fancy.CRGB):
+		return f1.red == f2.red and f1.green == f2.green and f1.blue == f2.blue
+	else:
+		return f1.pack() == f2.pack()
 
 WHITE = PlayerColor('0000ff', True, False)
 BLACK = PlayerColor('000000', True, False)
