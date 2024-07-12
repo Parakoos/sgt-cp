@@ -8,11 +8,11 @@ LED_BRIGHTNESS_HIGHLIGHT = get_float('LED_BRIGHTNESS_HIGHLIGHT', 0.6)
 # E.g., "0.33,0.66" would ensure that the value can only be 0, 0.33, 0.66 or 1, whichever is closest
 # Empty string leaves it unchanged, meaning it sets the value to whatever SGT provides.
 # Values must be listed low to high.
-_HSV_SATURATION_STEPS = get_string('HSV_SATURATION_STEPS', '0.5')
-_HSV_VALUE_STEPS = get_string('HSV_VALUE_STEPS', '0.5')
+_HSV_SATURATION_STEPS = get_string('HSV_SATURATION_STEPS', 0.5)
+_HSV_VALUE_STEPS = get_string('HSV_VALUE_STEPS', 0.5)
 # Add this amount to the saturation/value (before the step). Final amount will never negative or greater than 1.
-HSV_SATURATION_MODIFIER = get_float('HSV_SATURATION_MODIFIER', '0.2')
-HSV_VALUE_MODIFIER = get_float('HSV_VALUE_MODIFIER', '0.2')
+HSV_SATURATION_MODIFIER = get_float('HSV_SATURATION_MODIFIER', 0.2)
+HSV_VALUE_MODIFIER = get_float('HSV_VALUE_MODIFIER', 0.2)
 
 if _HSV_SATURATION_STEPS != '':
 	HSV_SATURATION_STEPS = [0.0] + [float(s) for s in _HSV_SATURATION_STEPS.split(',')] + [1.0]

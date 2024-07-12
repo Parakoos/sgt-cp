@@ -45,7 +45,6 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 		elif presses == 2:
 			sgt_connection.enqueue_send_secondary(seat=seat)
 
-
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress
 error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)

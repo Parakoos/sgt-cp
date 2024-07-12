@@ -56,7 +56,14 @@ class ErrorHandlerResumeOnButtonPress:
 		self.in_error = False
 
 	def clear_error_on_button_press(self, btn_pin: Pin, presses: int, long_press: bool):
-		self.in_error = False
+		import supervisor
+		if presses == 1 and not long_press:
+			self.in_error = False
+		elif presses == 2 and not long_press:
+			supervisor.reload()
+		elif presses == 1 and long_press and not supervisor.runtime.usb_connected:
+			import microcontroller
+			microcontroller.reset()
 
 	def on_error(self, exception: Exception):
 		self.in_error = True
