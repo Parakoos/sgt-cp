@@ -38,8 +38,16 @@ TIME_REMINDER_PULSE_DURATION = get_float('TABLE_TIME_REMINDER_PULSE_DURATION', 0
 # Maximum times a warning is shown in series
 TIME_REMINDER_MAX_PULSES = get_int('TABLE_TIME_REMINDER_MAX_PULSES', 5)
 
+# Easing functions for a sparkle
+SPARKLE_EASINGS = (get_ease('TABLE_SPARKLE_EASE_IN', 'CubicEaseInOut'), get_ease('TABLE_SPARKLE_EASE_OUT', 'CubicEaseInOut'))
+# How much of a side should be covered by sparkles? Between 0 and 1
+SPARKLE_COVER = get_float('TABLE_SPARKLE_COVER', 1.0)
+# The range of duration of a given sparkle.
+SPARKLE_DURATION_MIN = get_float('TABLE_SPARKLE_DURATION_MIN', 0.1)
+SPARKLE_DURATION_MAX = get_float('TABLE_SPARKLE_DURATION_MAX', 0.5)
+
 from view import View
-from game_state import GameState, Player
+from game_state import GameState, Player, STATE_START, STATE_SIM_TURN, STATE_ADMIN
 from adafruit_pixelbuf import PixelBuf
 from adafruit_led_animation.animation.rainbowcomet import RainbowComet
 from adafruit_led_animation.animation.comet import Comet
@@ -47,8 +55,10 @@ from sgt_animation import SgtAnimation, SgtSolid
 import time
 from utils.find import find_thing
 from utils.color import DisplayedColor, BLUE as BLUE_PC, RED as RED_PC, BLACK as BLACK_PC
-from utils.transition import TransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions, PropertyTransition, NoOpTransition
+from utils.transition import TransitionFunction, CallbackTransitionFunction, ParallellTransitionFunctions, ColorTransitionFunction, SerialTransitionFunctions, PropertyTransition, NoOpTransition
 from math import ceil
+from random import randint, uniform
+import adafruit_fancyled.adafruit_fancyled as fancy
 import adafruit_logging as logging
 log = logging.getLogger()
 
@@ -57,6 +67,7 @@ BLUE = BLUE_PC.highlight
 RED = RED_PC.highlight
 
 class ViewTableOutline(View):
+	seats_with_pressed_keys: set[int]
 	def __init__(self,
 			pixels: PixelBuf,
 			seat_definitions: list[tuple[float, int]],
@@ -65,6 +76,7 @@ class ViewTableOutline(View):
 		self.pixels = pixels
 		self.seat_definitions = seat_definitions
 		self.seat_count = len(seat_definitions)
+		self.seats_with_pressed_keys = set()
 		self.pixels.auto_write = False
 		self.comet_refresh_rate = 1/COMET_SPEED_PPS
 		self.animation = SgtAnimation(BLACK, (SgtSolid(self.pixels, 0x0), None, True))
@@ -129,12 +141,48 @@ class ViewTableOutline(View):
 	def on_time_reminder(self, time_reminder_count: int):
 		if isinstance(self.animation, SgtSeatedAnimation):
 			self.animation.on_time_reminder(time_reminder_count)
+	def on_pressed_seats_change(self, seats: set[int]):
+		self.seats_with_pressed_keys = seats
 
 class Line():
-	def __init__(self, midpoint: float, length: float, color: DisplayedColor) -> None:
-		self.midpoint = midpoint
+	sparkles: list[tuple[int, SerialTransitionFunctions]]
+	def __init__(self, pixels: PixelBuf, midpoint: float, length: float, color: DisplayedColor) -> None:
+		self.pixels = pixels
+		self.midpoint = midpoint % len(pixels)
 		self.length = length
 		self.color = color
+		self.sparkle = False
+		self.sparkles = list()
+	def draw(self):
+		lower_bound = ceil(self.midpoint - (self.length/2))
+		upper_bound = ceil(self.midpoint + (self.length/2))
+		for n in range (lower_bound, upper_bound):
+			self.pixels[n % len(self.pixels)] = self.color.current_color
+		if self.sparkle:
+			if len(self.sparkles) < round(self.length * SPARKLE_COVER):
+				sparkle_position = 0
+				while True:
+					sparkle_position = randint(lower_bound, upper_bound)
+					for spark in self.sparkles:
+						if sparkle_position == spark[0]:
+							continue
+					break
+				duration = uniform(SPARKLE_DURATION_MIN, SPARKLE_DURATION_MAX)
+				sparkle_transition = SerialTransitionFunctions([
+					TransitionFunction(SPARKLE_EASINGS[0](start=0, end=1, duration=duration/2)),
+					TransitionFunction(SPARKLE_EASINGS[1](start=1, end=0, duration=duration/2)),
+				])
+				self.sparkles.append((sparkle_position, sparkle_transition))
+		for spark in self.sparkles:
+			tranny = spark[1].fns[0]
+			done = spark[1].loop()
+			if done:
+				self.sparkles.remove(spark)
+			else:
+				progress = tranny.value
+				brightness = self.color.brightness * (1-progress) + progress
+				self.pixels[spark[0] % len(self.pixels)] = fancy.gamma_adjust(self.color.fancy_color, brightness=brightness).pack()
+
 	def __repr__(self):
 		facts = []
 		if (self.midpoint != None):
@@ -178,12 +226,6 @@ class SgtSeatedAnimation():
 	def on_time_reminder(self, time_reminder_count: int):
 		pass
 
-	def draw_line(self, line:Line):
-		lower_bound = ceil(line.midpoint - (line.length/2))
-		upper_bound = ceil(line.midpoint + (line.length/2))
-		for n in range (lower_bound, upper_bound):
-			self.pixels[n%self.length] = line.color.current_color
-
 class SgtErrorAnimation(SgtSeatedAnimation):
 	seat_lines: list[Line]
 	def __init__(self, parent_view: ViewTableOutline):
@@ -196,7 +238,7 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 		for i in range(seat_count):
 			s1 = self.parent.seat_definitions[i]
 			s2 = self.parent.seat_definitions[(i+1)%seat_count]
-			self.seat_lines.append(Line(midpoint=s1[0]+s1[1]/2, length=0, color=RED))
+			self.seat_lines.append(Line(pixels=self.parent.pixels, midpoint=s1[0]+s1[1]/2, length=0, color=RED))
 			self.seat_line_max_lengths.append(round(min(s1[1], s2[1])*ERROR_MAX_FRACTION_OF_EDGE_FOR_PULSE))
 
 	def set_lengths(self, progress: float):
@@ -206,8 +248,8 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 	def animate(self):
 		if len(self.overall_transition.fns) == 0:
 			for _n in range(ERROR_PULSE_COUNT):
-				fade_in = TransitionFunction(ERROR_EASINGS[0](0, 1, ERROR_PULSE_DURATION/2), callback=self.set_lengths)
-				fade_out = TransitionFunction(ERROR_EASINGS[1](1, 0, ERROR_PULSE_DURATION/2), callback=self.set_lengths)
+				fade_in = CallbackTransitionFunction(ERROR_EASINGS[0](0, 1, ERROR_PULSE_DURATION/2), callback=self.set_lengths)
+				fade_out = CallbackTransitionFunction(ERROR_EASINGS[1](1, 0, ERROR_PULSE_DURATION/2), callback=self.set_lengths)
 				self.overall_transition.fns.append(fade_in)
 				self.overall_transition.fns.append(fade_out)
 			pause = NoOpTransition(ERROR_PAUSE_TIME)
@@ -216,7 +258,7 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 		self.overall_transition.loop()
 		self.pixels.fill(self.bg_color.current_color)
 		for line in self.seat_lines:
-			self.draw_line(line)
+			line.draw()
 		self.pixels.show()
 		return len(self.overall_transition.fns) > 1
 
@@ -253,11 +295,10 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 		color = active_player.color if active_player else state.color
 		self.fg_color = color.highlight
 		self.bg_color = color.dim
-		length = len(self.parent.pixels)
 		start_pixel = sd[0]
-		mid_pixel = (start_pixel + round(length/2)) % length
-		line_1 = Line(midpoint=start_pixel, length=sd[1], color=self.fg_color)
-		line_2 = Line(midpoint=mid_pixel, length=sd[1], color=self.fg_color)
+		mid_pixel = start_pixel + len(self.parent.pixels)/2
+		line_1 = Line(pixels=self.parent.pixels, midpoint=start_pixel, length=sd[1], color=self.fg_color)
+		line_2 = Line(pixels=self.parent.pixels, midpoint=mid_pixel, length=sd[1], color=self.fg_color)
 		self.seat_lines = [line_1, line_2]
 		self.start_ts = time.monotonic()
 		self.last_animation_ts = time.monotonic()
@@ -266,7 +307,7 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 	def __init__(self, parent_view: ViewTableOutline):
 		super().__init__(parent_view)
-		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK.copy()), transitions=[]) for s in self.seat_definitions)
+		self.seat_lines = list(LineTransition(Line(pixels=self.parent.pixels, midpoint=s[0], length=0, color=BLACK.copy()), transitions=[]) for s in self.seat_definitions)
 		self.blinks_left = 0
 		self.blink_transition = None
 		self.current_times = None
@@ -284,12 +325,13 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 
 		self.pixels.fill(0x0)
 		has_more_transitions = False
-		for seat_line in self.seat_lines:
+		for seat_0, seat_line in enumerate(self.seat_lines):
 			if len(seat_line.transitions) > 0:
 				if(seat_line.transitions[0].loop()):
 					seat_line.transitions = seat_line.transitions[1:]
 			has_more_transitions = has_more_transitions or len(seat_line.transitions) > 0
-			self.draw_line(seat_line.line)
+			seat_line.line.sparkle = self.parent.state.state == STATE_START and (seat_0+1) in self.parent.seats_with_pressed_keys
+			seat_line.line.draw()
 		self.pixels.show()
 		return has_more_transitions or self.blinks_left > 0 or self.blink_transition != None
 
@@ -303,7 +345,7 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 			player = find_thing((p for p in state.players if p.seat == seat+1), None)
 			if not isinstance(player, Player):
 				new_color = None
-			elif state.state == 'si':
+			elif state.state == STATE_SIM_TURN:
 				if (seat+1) in state.seat:
 					# Player is involved.
 					new_color = player.color.highlight
@@ -311,13 +353,13 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 						# Player has passed
 						new_line_length = ceil(new_line_length / 4)
 						new_color = player.color.dim
-			elif state.state == 'ad':
+			elif state.state == STATE_ADMIN:
 				if (seat+1) in state.seat:
 					# Player is involved. Since it is an admin turn, all involved players gets a short line.
 					new_color = player.color.dim
 					new_line_length = ceil(new_line_length / 4)
 			else:
-				new_color = player.color.highlight
+				new_color = player.color.dim
 
 			if seat_color == BLACK and new_color != None:
 				seat_line.length = 0
@@ -369,7 +411,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				self.seat_line.transitions = self.seat_line.transitions[1:]
 				self.seat_line.line.midpoint = self.seat_line.line.midpoint % self.length
 		self.pixels.fill(self.color_background.current_color)
-		self.draw_line(self.seat_line.line)
+		self.seat_line.line.draw()
 		self.pixels.show()
 		return len(self.seat_line.transitions) > 0 or self.blinks_left > 0 or self.blink_transition != None
 
@@ -382,7 +424,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		player_line_midpoint, player_line_length = self.seat_definitions[active_player.seat-1]
 
 		if self.seat_line == None:
-			self.seat_line = LineTransition(Line(player_line_midpoint, 0, active_player.color.black), [])
+			self.seat_line = LineTransition(Line(self.parent.pixels, player_line_midpoint, 0, active_player.color.black), [])
 
 		line_transitions = []
 

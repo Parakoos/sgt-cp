@@ -6,12 +6,10 @@ from utils.color import DisplayedColor, BLACK
 import adafruit_fancyled.adafruit_fancyled as fancy
 
 class TransitionFunction():
-	def __init__(self, easing: EasingBase, callback: callable[[float, any], None], callback_data: any = None) -> None:
+	def __init__(self, easing: EasingBase) -> None:
 		self.start_time = None
 		self.easing = easing
-		self.callback = callback
-		self.callback_data = callback_data
-		pass
+		self.value = None
 
 	def loop(self):
 		"""
@@ -19,13 +17,30 @@ class TransitionFunction():
 		"""
 		if self.start_time == None:
 			self.start_time = monotonic()
+			self.on_start()
 		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
-		progress = self.easing.ease(elapsed_time)
-		if self.callback_data != None:
-			self.callback(progress, self.callback_data)
-		else:
-			self.callback(progress)
+		self.value = self.easing.ease(elapsed_time)
 		return self.easing.duration == elapsed_time
+
+	def on_start(self):
+		pass
+
+class CallbackTransitionFunction(TransitionFunction):
+	def __init__(self, easing: EasingBase, callback: callable[[float, any], None], callback_data: any = None) -> None:
+		super().__init__(easing)
+		self.callback = callback
+		self.callback_data = callback_data
+
+	def loop(self):
+		"""
+		:returns: true if the transition has completed.
+		"""
+		done = super().loop()
+		if self.callback_data != None:
+			self.callback(self.value, self.callback_data)
+		else:
+			self.callback(self.value)
+		return done
 
 class NoOpTransition():
 	def __init__(self, duration: float) -> None:
@@ -38,26 +53,24 @@ class NoOpTransition():
 		elapsed_time = monotonic() - self.start_time
 		return elapsed_time > self.duration
 
-class PropertyTransition():
-	easing: EasingBase
+class PropertyTransition(TransitionFunction):
 	def __init__(self, object: any, property: str, target_value: float, easing: EasingBase, duration: float) -> None:
-		self.start_time = None
+		super().__init__(easing)
 		self.object = object
 		self.property = property
-		self.easing = easing
 		self.target_value = target_value
 		self.duration = duration
 
 	def loop(self):
 		if self.start_time == None:
-			self.start_time = monotonic()
 			self.easing = self.easing(start=getattr(self.object, self.property), end=self.target_value, duration=self.duration)
-		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
-		setattr(self.object, self.property, self.easing.ease(elapsed_time))
-		return self.duration == elapsed_time
+		done = super().loop()
+		setattr(self.object, self.property, self.value)
+		return done
 
-class ColorTransitionFunction():
+class ColorTransitionFunction(TransitionFunction):
 	def __init__(self, from_color: DisplayedColor, to_color: DisplayedColor, easing: EasingBase) -> None:
+		super().__init__(easing)
 		self.start_time = None
 		self.easing = easing
 		self.target_color = to_color if to_color != None else BLACK.black
@@ -67,7 +80,6 @@ class ColorTransitionFunction():
 		if self.target_color == self.color_to_update:
 			return True
 		if self.start_time == None:
-			self.start_time = monotonic()
 			if self.color_to_update.is_black():
 				self.starting_fancy = self.target_color.fancy_color
 				self.starting_brightness = 0.0
@@ -91,8 +103,8 @@ class ColorTransitionFunction():
 					self.target_hue = self.starting_hue + distance_if_adding
 				else:
 					self.target_hue = self.starting_hue - distance_if_subtracting
-		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
-		progress = self.easing.ease(elapsed_time)
+		done = super().loop()
+		progress = self.value
 		if self.hsv_transition:
 			anti_progress = (1-progress)
 			h = (progress * self.target_hue + anti_progress * self.starting_hue) % 1
@@ -103,7 +115,7 @@ class ColorTransitionFunction():
 			new_fancy = fancy.mix(self.starting_fancy, self.target_fancy, progress) if self.starting_fancy != self.target_fancy else self.starting_fancy
 		new_brightness = round(self.starting_brightness * (1-progress) + self.target_brightness * progress, 2)
 		self.color_to_update.update(new_fancy, new_brightness)
-		return self.easing.duration == elapsed_time
+		return done
 
 class ParallellTransitionFunctions():
 	def __init__(self, *fns: TransitionFunction) -> None:

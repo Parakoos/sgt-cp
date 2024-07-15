@@ -40,12 +40,14 @@ class Buttons():
 	# Looks at the keys array to see which further presses and releases has occured, and
 	# records them for later review.
 	def detect_button_presses(self):
+		pressed_keys_changed = False
 		for keys, pins in self.keys.items():
 			while True:
 				event = keys.events.get()
 				if not event:
 					break
 
+				pressed_keys_changed = True
 				pin = pins[event.key_number]
 
 				if event.pressed:
@@ -74,6 +76,8 @@ class Buttons():
 					self.pressed_keys[pin].pressed_ts = event.timestamp
 					self.pressed_keys[pin].released_ts = None
 					log.debug(f"Key pressed. Pin: {self.pressed_keys[pin].pin}, Presses: {self.pressed_keys[pin].presses}, TS: {self.pressed_keys[pin].pressed_ts}")
+		if pressed_keys_changed and 'PRESSED_KEYS' in self.callbacks:
+			self.callbacks['PRESSED_KEYS'](self.pressed_pins)
 
 	# Looks at the current list of recorded key presses, and see if enough time has passed
 	# since the last press or release to determine that a series of short presses has concluded,
@@ -123,6 +127,12 @@ class Buttons():
 			del self.callbacks[None]
 		else:
 			self.callbacks[None] = callback
+
+	def set_pressed_keys_update_callback(self, callback: callable[[set[Pin]]: None]):
+		if callback == None:
+			del self.callbacks['PRESSED_KEYS']
+		else:
+			self.callbacks['PRESSED_KEYS'] = callback
 
 	def execute_button_press(self, key: tuple[Pin, int, bool]):
 		cb = self.callbacks.get(key)

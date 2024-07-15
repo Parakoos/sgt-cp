@@ -35,9 +35,10 @@ from view_seated_action_leds import ViewSeatedActionLeds
 
 from neopixel import NeoPixel
 pixels = NeoPixel(PIXELS_PIN, PIXELS_LENGTH, brightness=1, auto_write=False)
+viewTableOutline = ViewTableOutline(pixels, seat_definitions=SEAT_DEFINITIONS)
 view = ViewMulti([
 	ViewConsole(),
-	ViewTableOutline(pixels, seat_definitions=SEAT_DEFINITIONS),
+	viewTableOutline,
 	ViewSeatedActionLeds(arcade_leds),
 	])
 view.set_state(GameState())
@@ -71,12 +72,15 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 		elif presses == 2:
 			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success)
 
+def pressed_keys_update_callback(pressed_keys: set[Pin]):
+	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress
 error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)
 def on_connect():
 	buttons.clear_callbacks()
+	buttons.set_pressed_keys_update_callback(pressed_keys_update_callback)
 	for btn_pin in BUTTON_PINS:
 		buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, callback = btn_callback)

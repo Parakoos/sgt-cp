@@ -6,6 +6,7 @@ from game_state import GameState
 
 # =================== Settings =================== #
 SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
+# SEAT_DEFINITIONS = [(0,10),(10,10),(20,10)]
 LED_BRIGHTNESS_NORMAL = 0.1				# 0-1. How bright do you want the LED?
 LED_BRIGHTNESS_HIGHLIGHT = 0.5			# When highlighting something, how bright should it be?
 SHAKE_THRESHOLD = 20					# How sensitive should it be for detecting shakes?
@@ -37,9 +38,10 @@ from view_table_outline import ViewTableOutline
 
 from adafruit_dotstar import DotStar
 dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
+viewTableOutline = ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS)
 view = ViewMulti([
 	ViewConsole(),
-	ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS),
+	viewTableOutline,
 	#  ViewSeatedActionLeds(arcade_leds),
 	])
 view.set_state(GameState())
@@ -97,11 +99,15 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success, on_failure=tone.error)
 
 
+def pressed_keys_update_callback(pressed_keys: set[Pin]):
+	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
+
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress
 error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)
 def on_connect():
 	buttons.clear_callbacks()
+	buttons.set_pressed_keys_update_callback(pressed_keys_update_callback)
 	for btn_pin in BUTTON_PINS:
 		buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
