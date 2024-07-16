@@ -5,6 +5,7 @@ from sgt_connection import SgtConnection
 from view import View
 from buttons import Buttons
 from microcontroller import Pin
+from gc import collect
 
 def main_loop(
 		connection: SgtConnection,
@@ -20,17 +21,22 @@ def main_loop(
 				connection.connect()
 			while not connection.is_connected():
 				view.animate()
+				collect()
 			view.switch_to_no_game()
 			if on_connect:
 				on_connect()
+			collect()
 			while connection.is_connected():
 				busy = view.animate()
+				collect()
 				for loop in loops:
 					busy = busy or loop() # Each loop (and view.animate) should return True if it should block polling
-				messages_sent = connection.send_command()
+				connection.send_command()
 				connection.poll_for_new_messages()
 				if connection.handle_new_messages():
 					log_memory_usage('After Game State Update')
+				else:
+					collect()
 			log.debug('-------------------- DISCONNECTED --------------------')
 		except Exception as e:
 			log_exception(e)
