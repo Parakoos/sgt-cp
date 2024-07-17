@@ -53,7 +53,9 @@ class ViewTableOutline(View):
 				return
 		raise Exception('Weird admin state...')
 	def switch_to_paused(self, state: GameState, old_state: GameState):
-		from seated_animation.seated_pause import SgtPauseAnimation
+		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_paused b4')
+		collect()
+		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_paused after')
 		if not isinstance(self.animation, SgtPauseAnimation):
 			self.animation = SgtPauseAnimation(self)
 	def switch_to_sandtimer_running(self, state: GameState, old_state: GameState):
@@ -112,3 +114,4 @@ class ViewTableOutline(View):
 from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
 from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
 from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
+from seated_animation.seated_pause import SgtPauseAnimation

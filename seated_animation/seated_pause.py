@@ -40,7 +40,7 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 		pixels_moved = PAUSE_SPEED_PPS * time_passed
 		for line in self.seat_lines:
 			line.midpoint = (line.midpoint + pixels_moved) % self.length
-			self.draw_line(line)
+			line.draw()
 		self.pixels.show()
 		self.last_animation_ts = now
 		return len(self.overall_transition.fns) > 1
