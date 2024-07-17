@@ -3,13 +3,15 @@ log = logging.getLogger()
 from time import monotonic
 from easing import EasingBase
 from utils.color import DisplayedColor, BLACK
+from ulab.numpy import trapz
 import adafruit_fancyled.adafruit_fancyled as fancy
 
 class TransitionFunction():
-	def __init__(self, easing: EasingBase) -> None:
+	def __init__(self, easing: EasingBase, loop: bool=False) -> None:
 		self.start_time = None
 		self.easing = easing
 		self.value = None
+		self.mode_loop = loop
 
 	def loop(self):
 		"""
@@ -18,9 +20,15 @@ class TransitionFunction():
 		if self.start_time == None:
 			self.start_time = monotonic()
 			self.on_start()
-		elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
-		self.value = self.easing.ease(elapsed_time)
-		return self.easing.duration == elapsed_time
+
+		if self.mode_loop:
+			elapsed_time = (monotonic() - self.start_time) % self.easing.duration
+			self.value = self.easing.ease(elapsed_time)
+			return False
+		else:
+			elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
+			self.value = self.easing.ease(elapsed_time)
+			return self.easing.duration == elapsed_time
 
 	def on_start(self):
 		pass
@@ -138,3 +146,48 @@ class SerialTransitionFunctions():
 
 	def append(self, fn: TransitionFunction):
 		self.fns.append(fn)
+
+class RampUpDownTransitionFunction():
+	ramp_up_ease: EasingBase
+	ramp_down_ease: EasingBase
+	def __init__(self, target_velocity: float, start_position: float, end_position: float, ease_in: EasingBase, ease_in_duration: float, ease_out: EasingBase, ease_out_duration: float) -> None:
+		self.ramp_up_ease = ease_in(0, target_velocity, ease_in_duration)
+		self.ramp_down_ease = ease_out(target_velocity, 0, ease_out_duration)
+		ramp_up_distance = trapz([self.ramp_up_ease(x/100)*ease_in_duration for x in range(0, 101)], dx=0.01)
+		ramp_down_distance = trapz([self.ramp_down_ease(x/100)*ease_out_duration for x in range(0, 101)], dx=0.01)
+		mid_distance = end_position - start_position - ramp_up_distance - ramp_down_distance
+		mid_duration = mid_distance / target_velocity
+		self.mid_velocity = target_velocity
+		self.time_until_ramp_down = self.ramp_up_ease.duration + mid_duration
+		self.duration = self.ramp_up_ease.duration + self.ramp_down_ease.duration + mid_duration
+		self.end_position = end_position
+
+		# Loop Variables
+		self.prev_loop_ts = None
+		self.velocity = None
+		self.start_time = None
+		self.value = start_position
+
+	def loop(self):
+		if self.start_time == None:
+			self.start_time = monotonic()
+			self.prev_loop_ts = self.start_time
+			self.velocity = self.ramp_up_ease(0)
+			return False
+		now = monotonic()
+		t = min(now - self.start_time, self.duration)
+		if t == self.duration:
+			self.value = self.end_position
+			return True
+		if t < self.ramp_up_ease.duration:
+			self.velocity = self.ramp_up_ease(t)
+		elif t < self.time_until_ramp_down:
+			self.velocity = self.mid_velocity
+		else:
+			t_into_rampdown = min(self.ramp_down_ease.duration, t - self.time_until_ramp_down)
+			self.velocity = self.ramp_down_ease(t_into_rampdown)
+
+		delta = now - self.prev_loop_ts
+		self.value += delta * self.velocity
+		self.prev_loop_ts = now
+		return False

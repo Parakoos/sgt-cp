@@ -1,4 +1,4 @@
-from utils.settings import get_int, get_float, get_ease
+from utils.settings import get_int, get_ease
 
 # Easing function for moving the active player highlight.
 HIGHLIGHT_MOVE_EASE = get_ease('TABLE_HIGHLIGHT_MOVE_EASE', 'BounceEaseOut')

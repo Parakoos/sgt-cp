@@ -11,6 +11,7 @@ from adafruit_led_animation.animation.comet import Comet
 from sgt_animation import SgtAnimation, SgtSolid
 from utils.color import BLUE as BLUE_PC, RED as RED_PC, BLACK as BLACK_PC
 import adafruit_logging as logging
+from gc import collect, mem_free
 log = logging.getLogger()
 
 BLACK = BLACK_PC.black
@@ -82,16 +83,23 @@ class ViewTableOutline(View):
 		from seated_animation.seated_error import SgtErrorAnimation
 		if not isinstance(self.animation, SgtErrorAnimation):
 			self.animation = SgtErrorAnimation(self)
+	def switch_to_random_start_animation(self):
+		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation b4')
+		collect()
+		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation after')
+		self.animation = SgtSeatedRandomStartAnimation(self)
 	def on_state_update(self, state: GameState, old_state: GameState):
 		from seated_animation.seated_animation import SgtSeatedAnimation
 		if isinstance(self.animation, SgtSeatedAnimation):
 			self.animation.on_state_update(state, old_state)
 	def _activate_multiplayer_animation(self):
-		from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
+		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation b4')
+		collect()
+		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation after')
 		if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
 			self.animation = SgtSeatedMultiplayerAnimation(self)
 	def _activate_singleplayer_animation(self):
-		from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
+		log.debug(f'--> Free memory: {mem_free():,} @ _activate_singleplayer_animation')
 		if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
 			self.animation = SgtSeatedSingleplayerAnimation(self)
 	def on_time_reminder(self, time_reminder_count: int):
@@ -100,3 +108,7 @@ class ViewTableOutline(View):
 			self.animation.on_time_reminder(time_reminder_count)
 	def on_pressed_seats_change(self, seats: set[int]):
 		self.seats_with_pressed_keys = seats
+
+from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
+from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
+from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation

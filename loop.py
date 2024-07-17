@@ -27,10 +27,10 @@ def main_loop(
 				on_connect()
 			collect()
 			while connection.is_connected():
-				busy = view.animate()
+				view.animate()
 				collect()
 				for loop in loops:
-					busy = busy or loop() # Each loop (and view.animate) should return True if it should block polling
+					loop()
 				connection.send_command()
 				connection.poll_for_new_messages()
 				if connection.handle_new_messages():
