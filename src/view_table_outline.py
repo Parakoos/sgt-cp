@@ -36,7 +36,7 @@ class ViewTableOutline(View):
 		self.animation = SgtAnimation(BLACK, (SgtSolid(self.pixels, 0x0), None, True))
 		self.switch_to_not_connected()
 	def set_connection(self, connection: SgtConnection):
-		self.sgt_connection = SgtConnection
+		self.sgt_connection = connection
 	def animate(self) -> bool:
 		shared_stuff_busy = super().animate()
 		this_animation_busy = self.animation.animate()

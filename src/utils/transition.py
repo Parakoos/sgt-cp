@@ -153,26 +153,27 @@ class RampUpDownTransitionFunction():
 	def __init__(self, target_velocity: float, start_position: float, end_position: float, ease_in: EasingBase, ease_in_duration: float, ease_out: EasingBase, ease_out_duration: float) -> None:
 		self.ramp_up_ease = ease_in(0, target_velocity, ease_in_duration)
 		self.ramp_down_ease = ease_out(target_velocity, 0, ease_out_duration)
-		ramp_up_distance = trapz([self.ramp_up_ease(x/100)*ease_in_duration for x in range(0, 101)], dx=0.01)
-		ramp_down_distance = trapz([self.ramp_down_ease(x/100)*ease_out_duration for x in range(0, 101)], dx=0.01)
-		mid_distance = end_position - start_position - ramp_up_distance - ramp_down_distance
-		mid_duration = mid_distance / target_velocity
+		ramp_up_distance = trapz([self.ramp_up_ease(x/100*ease_in_duration) for x in range(0, 101)], dx=0.01*ease_in_duration)
+		ramp_down_distance = trapz([self.ramp_down_ease(x/100*ease_out_duration) for x in range(0, 101)], dx=0.01*ease_out_duration)
+		self.mid_start_position = start_position + ramp_up_distance
+		self.mid_distance = end_position - start_position - ramp_up_distance - ramp_down_distance
+		if (self.mid_distance <= 0):
+			raise Exception('RampUpDown Mid-section mut be positive')
+		mid_duration = self.mid_distance / target_velocity
 		self.mid_velocity = target_velocity
 		self.time_until_ramp_down = self.ramp_up_ease.duration + mid_duration
-		self.duration = self.ramp_up_ease.duration + self.ramp_down_ease.duration + mid_duration
+		self.duration = self.time_until_ramp_down + self.ramp_down_ease.duration
 		self.end_position = end_position
 
 		# Loop Variables
-		self.prev_loop_ts = None
-		self.velocity = None
+		self.prev_loop_t = None
 		self.start_time = None
 		self.value = start_position
 
 	def loop(self):
 		if self.start_time == None:
 			self.start_time = monotonic()
-			self.prev_loop_ts = self.start_time
-			self.velocity = self.ramp_up_ease(0)
+			self.prev_loop_t = 0
 			return False
 		now = monotonic()
 		t = min(now - self.start_time, self.duration)
@@ -180,14 +181,20 @@ class RampUpDownTransitionFunction():
 			self.value = self.end_position
 			return True
 		if t < self.ramp_up_ease.duration:
-			self.velocity = self.ramp_up_ease(t)
+			# Ramp Up
+			dt = (t-self.prev_loop_t)
+			self.value += dt * self.ramp_up_ease(t - dt/2)
+			self.prev_loop_t = t
 		elif t < self.time_until_ramp_down:
-			self.velocity = self.mid_velocity
+			# Mid Section
+			self.value = self.mid_start_position + self.mid_velocity * (t - self.ramp_up_ease.duration)
 		else:
-			t_into_rampdown = min(self.ramp_down_ease.duration, t - self.time_until_ramp_down)
-			self.velocity = self.ramp_down_ease(t_into_rampdown)
+			if self.prev_loop_t < self.time_until_ramp_down:
+				# This is the first of the Ramp Down cycle.
+				self.value = self.mid_start_position + self.mid_distance
+				self.prev_loop_t = self.time_until_ramp_down
+			dt = (t-self.prev_loop_t)
+			self.value += dt * self.ramp_down_ease(t - self.time_until_ramp_down - dt/2)
+			self.prev_loop_t = t
 
-		delta = now - self.prev_loop_ts
-		self.value += delta * self.velocity
-		self.prev_loop_ts = now
 		return False

@@ -10,7 +10,7 @@ START_GAME_SPIN_EASE_IN_DURATION = get_float('TABLE_START_GAME_SPIN_EASE_IN_DURA
 START_GAME_SPIN_EASE_OUT = get_ease('TABLE_START_GAME_SPIN_EASE_OUT', 'CubicEaseOut')
 START_GAME_SPIN_EASE_OUT_DURATION = get_float('TABLE_START_GAME_SPIN_EASE_OUT_DURATION', 1.0)
 # Controls how colors shift between the potential player colors
-START_GAME_COLOR_EASING = get_ease('TABLE_START_GAME_COLOR_EASING', 'QuinticEaseInOut')
+START_GAME_COLOR_EASING = get_ease('TABLE_START_GAME_COLOR_EASING', 'CubicEaseOut')
 START_GAME_COLOR_DURATION = get_float('TABLE_START_GAME_COLOR_DURATION', 1.0)
 
 from seated_animation.seated_animation import SgtSeatedAnimation, Line
