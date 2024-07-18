@@ -26,7 +26,6 @@ class SgtConnectionBluetooth(SgtConnection):
 		self.last_is_connected_check = False
 		self.all_read_text = ''
 		self.text_read = ''
-		self.last_line_executed = None
 		self.byte_array = bytearray(20)
 		self.command_to_send = None
 		self.line_to_process = None
@@ -115,14 +114,10 @@ class SgtConnectionBluetooth(SgtConnection):
 					if do_this_line[1] == 'GET SETUP':
 						log.debug('SENDING SUGGESTED SETUP')
 						self._send(self.suggestions)
-						self.last_line_executed = do_this_line[1]
-					elif (do_this_line[1] == self.last_line_executed):
-						log.debug(f"SKIP DUPLICATE LINE: {self.last_line_executed}")
 					else:
 						log.debug(f"EXECUTE LINE: {do_this_line}")
 						try:
 							self.line_to_process = do_this_line
-							self.last_line_executed = do_this_line[1]
 						except Exception as e:
 							print_exception(e)
 							self._poll_for_latest_state()

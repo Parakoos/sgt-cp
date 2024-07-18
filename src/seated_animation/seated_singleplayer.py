@@ -7,7 +7,7 @@ HIGHLIGHT_MOVE_SPEED_PPS = get_int('TABLE_HIGHLIGHT_MOVE_SPEED_PPS', 36)
 
 from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition, FADE_EASE, FADE_DURATION, TIME_REMINDER_EASINGS, TIME_REMINDER_MAX_PULSES, TIME_REMINDER_PULSE_DURATION
 from view_table_outline import ViewTableOutline, BLACK
-from game_state import GameState
+from game_state import GameState, Player, STATE_PLAYING
 from utils.color import DisplayedColor
 from utils.transition import PropertyTransition, SerialTransitionFunctions, ColorTransitionFunction, ParallellTransitionFunctions
 import adafruit_logging as logging
@@ -18,13 +18,18 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 	color_background: DisplayedColor
 	blink_transition: SerialTransitionFunctions | None
 
-	def __init__(self, parent_view: ViewTableOutline):
-		super().__init__(parent_view)
+	def __init__(self, parent_view: ViewTableOutline, random_first_player: Player|None = None):
+		super().__init__(parent_view, fade_to_black=(random_first_player==None))
 		self.color_background = BLACK.copy()
 		self.seat_line = None
 		self.blinks_left = 0
 		self.blink_transition = None
 		self.current_times = None
+		if random_first_player:
+			player_line_midpoint, player_line_length = self.seat_definitions[random_first_player.seat-1]
+			self.seat_line = LineTransition(Line(self.parent.pixels, player_line_midpoint, player_line_length, random_first_player.color.highlight), [])
+			self.color_background = random_first_player.color.dim
+			self.seat_line.line.sparkle = True
 
 	def animate(self):
 		if self.seat_line == None:
@@ -62,10 +67,13 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 
 		line_transitions = []
 
-		self.player_bg_color = active_player.color.dim if state.state == 'pl' else None
+		about_to_start = state.get_current_timings().total_play_time == 0
+
+		self.player_bg_color = active_player.color.dim if state.state == STATE_PLAYING or about_to_start else None
 		self.player_fg_color = active_player.color.highlight
 
 		line = self.seat_line.line
+		line.sparkle = about_to_start
 		from_pixel = line.midpoint
 		to_pixel = player_line_midpoint
 		line_ease_duration = FADE_DURATION

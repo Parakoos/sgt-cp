@@ -107,7 +107,8 @@ class ViewTableOutline(View):
 	def _activate_singleplayer_animation(self):
 		log.debug(f'--> Free memory: {mem_free():,} @ _activate_singleplayer_animation')
 		if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
-			self.animation = SgtSeatedSingleplayerAnimation(self)
+			random_first_player = None if not isinstance(self.animation, SgtSeatedRandomStartAnimation) else self.animation.selected_player
+			self.animation = SgtSeatedSingleplayerAnimation(self, random_first_player)
 	def on_time_reminder(self, time_reminder_count: int):
 		from seated_animation.seated_animation import SgtSeatedAnimation
 		if isinstance(self.animation, SgtSeatedAnimation):

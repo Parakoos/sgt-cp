@@ -50,14 +50,14 @@ class Line():
 				unused_indices = [i for i in range(diff)]
 				for spark in self.sparkles:
 					unused_indices.remove(spark[0])
-				spark_index = choice(unused_indices)
-
-				duration = uniform(SPARKLE_DURATION_MIN, SPARKLE_DURATION_MAX)
-				sparkle_transition = SerialTransitionFunctions([
-					TransitionFunction(SPARKLE_EASINGS[0](start=0, end=1, duration=duration/2)),
-					TransitionFunction(SPARKLE_EASINGS[1](start=1, end=0, duration=duration/2)),
-				])
-				self.sparkles.append((spark_index, sparkle_transition))
+				if len(unused_indices) > 0:
+					spark_index = choice(unused_indices)
+					duration = uniform(SPARKLE_DURATION_MIN, SPARKLE_DURATION_MAX)
+					sparkle_transition = SerialTransitionFunctions([
+						TransitionFunction(SPARKLE_EASINGS[0](start=0, end=1, duration=duration/2)),
+						TransitionFunction(SPARKLE_EASINGS[1](start=1, end=0, duration=duration/2)),
+					])
+					self.sparkles.append((spark_index, sparkle_transition))
 		for spark in self.sparkles:
 			tranny = spark[1].fns[0]
 			done = spark[1].loop()
