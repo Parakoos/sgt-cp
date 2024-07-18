@@ -37,7 +37,7 @@ class ViewConsole(View):
 	def switch_to_error(self):
 		super().switch_to_error()
 		log.info(f"-> Error")
-	def on_state_update(self, state: GameState, old_state: GameState):
+	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		log.info("State: %s", state)
 	def on_time_reminder(self, time_reminder_count: int):
 		log.info(f"-> Time Reminder Triggered. Count: {time_reminder_count}")

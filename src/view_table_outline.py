@@ -94,7 +94,7 @@ class ViewTableOutline(View):
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation after')
 		self.animation = SgtSeatedRandomStartAnimation(self)
-	def on_state_update(self, state: GameState, old_state: GameState):
+	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		from seated_animation.seated_animation import SgtSeatedAnimation
 		if isinstance(self.animation, SgtSeatedAnimation):
 			self.animation.on_state_update(state, old_state)

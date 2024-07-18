@@ -76,7 +76,7 @@ class View():
 		self.state = None
 		self.time_reminder_check_timeout = 0
 		self.current_times = None
-	def on_state_update(self, state: GameState, old_state: GameState):
+	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		pass
 	def on_time_reminder(self, time_reminder_count: int):
 		"Sub-classes should implement this to handle triggered time reminders"

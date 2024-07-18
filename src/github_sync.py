@@ -36,7 +36,7 @@ for file in files:
 		print(file['path'])
 		with session.get(file['url'], headers=header_auth|{'accept': 'application/vnd.github.raw+json'}) as response:
 			with open(file['path'], "w") as fp:
-				fp.write(response.text)
+				fp.write(response.content if file['path'].endswith('.mpy') else response.text)
 print('Pulled down the latest data from GitHub! Reloading in 1 second.')
 time.sleep(1)
 supervisor.reload()
