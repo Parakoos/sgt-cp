@@ -108,6 +108,18 @@ class SgtConnection:
 			return _failure(on_failure)
 		else:
 			return _success('Undo', on_success)
+	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		if self.view.state == None:
+			return _failure(on_failure)
+		if self.view.state.state != STATE_START:
+			return _failure(on_failure)
+		if seat == None:
+			return _success('StartGame', on_success)
+		player = self.view.state.get_player_by_seat(seat)
+		if player:
+			return _success('StartGame', on_success)
+		else:
+			return _failure(on_failure)
 
 	def predict_next_game_state(self, command: str):
 		if command == 'ToggleAdmin':

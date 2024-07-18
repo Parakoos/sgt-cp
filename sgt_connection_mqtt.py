@@ -102,7 +102,11 @@ class SgtConnectionMQTT(SgtConnection):
 			self.connect()
 		gameStateVersion = self.view.state.game_state_version
 		action_map = {"gameStateVersion": gameStateVersion, "action": value}
-		if seat != None:
+		if (value == 'StartGame'):
+			action_map['setPlayerOrderToSeatOrder'] = True
+			if seat != None:
+				action_map["firstPlayerSeat"] = seat
+		elif seat != None:
 			action_map["seat"] = seat
 		action = json.dumps(action_map)
 		log.debug('MQTT Publish to %s value %s', self.mqtt_topic_command, action)
@@ -159,3 +163,5 @@ class SgtConnectionMQTT(SgtConnection):
 		self._enqueue_command(super().enqueue_send_pause_off(on_success, on_failure))
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
+	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_command(super().enqueue_send_start_game(seat, on_success, on_failure), seat=seat)

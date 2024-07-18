@@ -41,14 +41,19 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 		self.color_transition_bg = None
 		self.end_ts = time.monotonic() + self.spin_transition.duration
 		self.random_player = None
+		self.start_game_command_sent = False
 
 	def animate(self):
 		done = self.spin_transition.loop()
 		self.line.midpoint = self.spin_transition.value
-		if done:
+		if self.start_game_command_sent:
+			pass
+		elif done:
 			self.line.sparkle = True
 			self.line.color = self.selected_player.color.highlight
 			self.bg_color = self.selected_player.color.dim
+			self.parent.sgt_connection.enqueue_send_start_game(self.selected_player.seat)
+			self.start_game_command_sent = True
 		else:
 			if self.color_transition_fg == None or self.color_transition_bg == None:
 				time_left = self.end_ts - time.monotonic()

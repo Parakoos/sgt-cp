@@ -1,4 +1,5 @@
 from utils.settings import get_int
+from sgt_connection import SgtConnection
 
 # Speed of comet animations, in Pixels/Second.
 COMET_SPEED_PPS = get_int('TABLE_COMET_SPEED_PPS', 10)
@@ -20,6 +21,7 @@ RED = RED_PC.highlight
 
 class ViewTableOutline(View):
 	seats_with_pressed_keys: set[int]
+	sgt_connection: SgtConnection
 	def __init__(self,
 			pixels: PixelBuf,
 			seat_definitions: list[tuple[float, int]],
@@ -33,6 +35,8 @@ class ViewTableOutline(View):
 		self.comet_refresh_rate = 1/COMET_SPEED_PPS
 		self.animation = SgtAnimation(BLACK, (SgtSolid(self.pixels, 0x0), None, True))
 		self.switch_to_not_connected()
+	def set_connection(self, connection: SgtConnection):
+		self.sgt_connection = SgtConnection
 	def animate(self) -> bool:
 		shared_stuff_busy = super().animate()
 		this_animation_busy = self.animation.animate()

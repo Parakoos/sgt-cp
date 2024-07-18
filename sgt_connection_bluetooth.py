@@ -192,6 +192,12 @@ class SgtConnectionBluetooth(SgtConnection):
 		self._enqueue_command(super().enqueue_send_pause_off(on_success, on_failure))
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
+	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		action = super().enqueue_send_start_game(seat, on_success, on_failure)
+		if action != None and seat != None:
+			self._enqueue_command(f'{action} #{seat}')
+		else:
+			self._enqueue_command(action)
 
 	def _poll_for_latest_state(self):
 		log.debug('Polling for new data')

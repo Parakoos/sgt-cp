@@ -46,6 +46,7 @@ view.set_state(GameState())
 # ---------- WIFI -------------#
 from sgt_connection_mqtt import SgtConnectionMQTT
 sgt_connection = SgtConnectionMQTT(view)
+viewTableOutline.set_connection(sgt_connection)
 
 # ---------- BUTTONS SETUP -------------#
 from buttons import Buttons

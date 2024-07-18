@@ -60,6 +60,7 @@ sgt_connection = SgtConnectionBluetooth(view,
 					field_order=BLUETOOTH_FIELD_ORDER,
 					field_divider=BLUETOOTH_FIELD_DIVIDER,
 				)
+viewTableOutline.set_connection(sgt_connection)
 
 # ---------- ACCELEROMETER / ORIENTATION SETUP -------------#
 # from accelerometer_playground import Accelerometer_Playground
