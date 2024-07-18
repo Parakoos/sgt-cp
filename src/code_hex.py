@@ -41,7 +41,7 @@ view = ViewMulti([
 	viewTableOutline,
 	ViewSeatedActionLeds(arcade_leds),
 	])
-view.set_state(GameState())
+view.set_state(None)
 
 # ---------- WIFI -------------#
 from sgt_connection_mqtt import SgtConnectionMQTT

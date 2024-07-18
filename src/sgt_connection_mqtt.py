@@ -24,7 +24,6 @@ from view import View
 from sgt_connection import SgtConnection
 from game_state import GameState
 import json
-import os
 
 class SgtConnectionMQTT(SgtConnection):
 	def __init__(self, view: View):
@@ -126,7 +125,7 @@ class SgtConnectionMQTT(SgtConnection):
 	def handle_new_messages(self) -> None:
 		if self.latest_message == None:
 			return False
-		game_state = GameState(json_state_string=self.latest_message, timestamp_offset=self.unix_time_offset)
+		game_state = None if len(self.latest_message.strip()) == 0 else GameState(json_state_string=self.latest_message, timestamp_offset=self.unix_time_offset)
 		self.latest_message = None
 		self.view.set_state(game_state)
 		return True

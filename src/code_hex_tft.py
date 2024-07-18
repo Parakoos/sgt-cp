@@ -12,7 +12,7 @@ BUTTON_PINS = [board.BUTTON, board.D1, board.D2]
 from view_multi import ViewMulti
 from view_console import ViewConsole
 view = ViewMulti([ViewConsole()])
-view.set_state(GameState())
+view.set_state(None)
 
 # ---------- WIFI -------------#
 from sgt_connection_mqtt import SgtConnectionMQTT
@@ -45,11 +45,16 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 		elif presses == 2:
 			sgt_connection.enqueue_send_secondary(seat=seat)
 
+def pressed_keys_update_callback(pressed_keys: set[Pin]):
+	if len(pressed_keys) == len(view.state.players):
+		sgt_connection.enqueue_send_start_game(2)
+
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress
 error_handler = ErrorHandlerResumeOnButtonPress(view, buttons)
 def on_connect():
 	buttons.clear_callbacks()
+	buttons.set_pressed_keys_update_callback(pressed_keys_update_callback)
 	for btn_pin in BUTTON_PINS:
 		buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, callback = btn_callback)

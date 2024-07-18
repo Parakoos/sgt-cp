@@ -44,7 +44,7 @@ view = ViewMulti([
 	viewTableOutline,
 	#  ViewSeatedActionLeds(arcade_leds),
 	])
-view.set_state(GameState())
+view.set_state(None)
 
 # ---------- SOUNDS -------------#
 # from tone_playground import TonePlayground
