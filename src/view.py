@@ -3,6 +3,7 @@ log = logging.getLogger()
 from game_state import GameState, STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED, STATE_RUNNING, STATE_NOT_RUNNING, STATE_SIM_TURN
 from time import monotonic
 
+
 class View():
 	def __init__(self):
 		self.state = None
