@@ -55,7 +55,12 @@ button_pin_to_val_when_pressed = {}
 for btn_pin in BUTTON_PINS:
 	button_pin_to_val_when_pressed[btn_pin] = BUTTON_VAL_WHEN_PRESSED
 buttons = Buttons(button_pin_to_val_when_pressed)
+sim_turn_selection_in_progress = False
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+	global sim_turn_selection_in_progress
+	if sim_turn_selection_in_progress:
+		# Stop reaction to buttons while the sim turn selection is in progress.
+		return
 	def on_success():
 		arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
 
@@ -63,7 +68,11 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 		if presses == 1:
 			sgt_connection.enqueue_send_toggle_admin(on_success=on_success)
 		elif presses == 2:
-			sgt_connection.enqueue_send_toggle_pause(on_success=on_success)
+			# sgt_connection.enqueue_send_toggle_pause(on_success=on_success)
+			if view.state.allow_sim_turn_start():
+				seat = BUTTON_PINS.index(btn_pin) + 1
+				viewTableOutline.begin_sim_turn_selection(seat)
+				sim_turn_selection_in_progress = True
 		elif presses == 3:
 			sgt_connection.enqueue_send_undo(on_success=on_success)
 	else:
@@ -74,7 +83,11 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success)
 
 def pressed_keys_update_callback(pressed_keys: set[Pin]):
+	global sim_turn_selection_in_progress
 	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
+	if len(pressed_keys) == 0:
+		# We know the sim turn selection is over once all buttons have been released
+		sim_turn_selection_in_progress = False
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress

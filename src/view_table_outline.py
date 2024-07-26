@@ -115,8 +115,14 @@ class ViewTableOutline(View):
 			self.animation.on_time_reminder(time_reminder_count)
 	def on_pressed_seats_change(self, seats: set[int]):
 		self.seats_with_pressed_keys = seats
+		if isinstance(self.animation, SgtSeatedSimTurnSelection):
+			self.animation.on_pressed_keys_change()
+	def begin_sim_turn_selection(self, seat: int):
+		if self.state.allow_sim_turn_start():
+			self.animation = SgtSeatedSimTurnSelection(self, seat)
 
 from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
 from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
 from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
 from seated_animation.seated_pause import SgtPauseAnimation
+from seated_animation.seated_sim_turn_selection import SgtSeatedSimTurnSelection

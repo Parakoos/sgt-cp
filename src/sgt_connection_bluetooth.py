@@ -143,12 +143,6 @@ class SgtConnectionBluetooth(SgtConnection):
 		log.info("-> %s", value)
 		self.uart.write((value+"\n").encode("utf-8"))
 
-		new_game_state = self.predict_next_game_state(value)
-		if new_game_state:
-			self.view.set_state(new_game_state)
-			while self.view.animate():
-				pass
-
 	def _enqueue_command(self, value: str):
 		if value != None:
 			self.command_to_send = value
@@ -188,11 +182,18 @@ class SgtConnectionBluetooth(SgtConnection):
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
 	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		action = super().enqueue_send_start_game(seat, on_success, on_failure)
-		if action != None and seat != None:
-			self._enqueue_command(f'{action} #{seat}')
+		command = super().enqueue_send_start_game(seat, on_success, on_failure)
+		if command != None and seat != None:
+			self._enqueue_command(f'{command} #{seat}')
 		else:
-			self._enqueue_command(action)
+			self._enqueue_command(command)
+	def enqueue_send_start_sim_turn(self, seats: set[int]):
+		command = super().enqueue_send_start_sim_turn(seats)
+		if command != None:
+			self._enqueue_command(f'{command} #{",".join([str(s) for s in seats])}')
+			return True
+		else:
+			return False
 
 	def _poll_for_latest_state(self):
 		log.debug('Polling for new data')

@@ -81,9 +81,9 @@ class SgtConnectionMQTT(SgtConnection):
 		log.info(f"MQTT message: {message}")
 		self.latest_message = message
 
-	def _enqueue_command(self, value: str, seat: int|None = None):
+	def _enqueue_command(self, value: str, seat: int|None = None, seats: list[int]|None = None):
 		if value != None:
-			self.command_to_send = (value, seat)
+			self.command_to_send = (value, seat, seats)
 
 	def send_command(self) -> bool:
 		if self.command_to_send == None:
@@ -93,7 +93,7 @@ class SgtConnectionMQTT(SgtConnection):
 			self.command_to_send = None
 			return True
 
-	def _send(self, value: str, seat: int|None = None):
+	def _send(self, value: str, seat: int|None = None, seats: list[int]|None = None):
 		if value == None:
 			return
 		log.info("send: %s", value)
@@ -107,13 +107,11 @@ class SgtConnectionMQTT(SgtConnection):
 				action_map["firstPlayerSeat"] = seat
 		elif seat != None:
 			action_map["seat"] = seat
+		elif seats != None:
+			action_map["seats"] = seats
 		action = json.dumps(action_map)
 		log.debug('MQTT Publish to %s value %s', self.mqtt_topic_command, action)
 		self.mqtt_client.publish(self.mqtt_topic_command, action)
-
-		new_game_state = self.predict_next_game_state(value)
-		if new_game_state:
-			self.view.set_state(new_game_state)
 
 	def poll_for_new_messages(self):
 		if not self.mqtt_client.is_connected():
@@ -164,3 +162,10 @@ class SgtConnectionMQTT(SgtConnection):
 		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
 	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_command(super().enqueue_send_start_game(seat, on_success, on_failure), seat=seat)
+	def enqueue_send_start_sim_turn(self, seats: set[int]):
+		command = super().enqueue_send_start_sim_turn(seats)
+		if command != None:
+			self._enqueue_command(command, seats=list(seats))
+			return True
+		else:
+			return False

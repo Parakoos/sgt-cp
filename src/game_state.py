@@ -235,6 +235,16 @@ class GameState():
 	def has_action(self, action):
 		return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
+	def allow_sim_turn_start(self):
+		if self.state == STATE_PLAYING:
+			return True
+		if self.state != STATE_ADMIN:
+			return False
+		if self.action_primary == None:
+			# We cannot know for sure what kind of admin state we are in...
+			return True
+		return "resumeTurn" in self.action_primary.action
+
 	def get_active_player(self) -> Player | None:
 		if len(self.seat) == 1:
 			return next((p for p in self.players if p.seat in self.seat))

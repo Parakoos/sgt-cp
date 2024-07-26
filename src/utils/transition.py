@@ -17,9 +17,12 @@ class TransitionFunction():
 		"""
 		:returns: true if the transition has completed.
 		"""
+		if self.easing.start == self.easing.end:
+			self.value = self.easing.end
+			return True
+
 		if self.start_time == None:
 			self.start_time = monotonic()
-			self.on_start()
 
 		if self.mode_loop:
 			elapsed_time = (monotonic() - self.start_time) % self.easing.duration
@@ -29,9 +32,6 @@ class TransitionFunction():
 			elapsed_time = min(self.easing.duration, monotonic() - self.start_time)
 			self.value = self.easing.ease(elapsed_time)
 			return self.easing.duration == elapsed_time
-
-	def on_start(self):
-		pass
 
 class CallbackTransitionFunction(TransitionFunction):
 	def __init__(self, easing: EasingBase, callback: callable[[float, any], None], callback_data: any = None) -> None:

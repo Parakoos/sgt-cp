@@ -121,37 +121,8 @@ class SgtConnection:
 		else:
 			return _failure(on_failure)
 
-	def predict_next_game_state(self, command: str):
-		if command == 'ToggleAdmin':
-			if self.view.state.state in (STATE_PLAYING, STATE_SIM_TURN):
-				return self.predict_next_game_state('TurnAdminOn')
-			elif self.view.state.state == STATE_ADMIN:
-				return self.predict_next_game_state('TurnAdminOff')
-		elif command == 'TurnAdminOn':
-			if self.view.state.state in (STATE_PLAYING, STATE_SIM_TURN):
-				return self.view.state.make_copy(state_override=STATE_ADMIN)
-		elif command == 'TurnAdminOff':
-			if self.view.state.state == STATE_ADMIN:
-				for player in self.view.state.players:
-					if player.action == 'in':
-						return self.view.state.make_copy(state_override=STATE_SIM_TURN)
-					elif player.action != None:
-						return self.view.state.make_copy(state_override=STATE_PLAYING)
-		elif command == 'TogglePause':
-			if self.view.state.state in (STATE_PLAYING, STATE_SIM_TURN, STATE_ADMIN):
-				return self.predict_next_game_state('TurnPauseOn')
-			elif self.view.state.state == STATE_PAUSE:
-				return self.predict_next_game_state('TurnPauseOff')
-		elif command == 'TurnPauseOn':
-			if self.view.state.state in (STATE_PLAYING, STATE_SIM_TURN, STATE_ADMIN):
-				return self.view.state.make_copy(state_override=STATE_PAUSE)
-		elif command == 'TurnPauseOff':
-			if self.view.state.state == STATE_PAUSE:
-				for player in self.view.state.players:
-					if player.action == 'in':
-						return self.view.state.make_copy(state_override=STATE_SIM_TURN)
-					elif player.action != None:
-						return self.view.state.make_copy(state_override=STATE_PLAYING)
-				# No one had any actions. We must want to go to admin time
-				return self.view.state.make_copy(state_override=STATE_ADMIN)
-		return None
+	def enqueue_send_start_sim_turn(self, seats: set[int]):
+		if self.view.state != None and self.view.state.state in [STATE_ADMIN, STATE_PLAYING]:
+			return 'StartSimTurn'
+		else:
+			return None

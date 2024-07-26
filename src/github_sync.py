@@ -32,7 +32,7 @@ with session.get(f"{tree_url}?recursive=1", headers=header_auth) as response:
 	files = json['tree']
 
 for file in files:
-	if file['type'] == 'blob':
+	if file['type'] == 'blob' and file['path'].endswith('.mpy'):
 		print(file['path'])
 		with session.get(file['url'], headers=header_auth|{'accept': 'application/vnd.github.raw+json'}) as response:
 			with open(file['path'], "w") as fp:

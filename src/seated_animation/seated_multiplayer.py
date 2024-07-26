@@ -86,8 +86,8 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 
 	def first_player_check(self):
 		# Temporarily start the first-player selection on first press. Later, wait for all buttons to be pressed.
-		all_pressed = len(self.parent.seats_with_pressed_keys) > 1
-		# all_pressed = len(self.parent.seats_with_pressed_keys) > 1 and len(self.parent.state.players) == len(self.parent.seats_with_pressed_keys)
+		# all_pressed = len(self.parent.seats_with_pressed_keys) > 1
+		all_pressed = len(self.parent.seats_with_pressed_keys) > 1 and len(self.parent.state.players) == len(self.parent.seats_with_pressed_keys)
 		if not all_pressed:
 			self.first_player_init_ts = None
 		elif self.first_player_init_ts == None:
