@@ -52,6 +52,16 @@ class QuadEaseOut(EasingBase):
 		return -(t * (t - 2))
 
 
+class QuadEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = QuadEaseOut(0, 0.5, 0.5)
+		self.f2 = QuadEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
+
 """
 Cubic easing functions
 """
@@ -75,6 +85,16 @@ class CubicEaseInOut(EasingBase):
 		return 0.5 * p * p * p + 1
 
 
+class CubicEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = CubicEaseOut(0, 0.5, 0.5)
+		self.f2 = CubicEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
+
 """
 Quartic easing functions
 """
@@ -96,6 +116,16 @@ class QuarticEaseInOut(EasingBase):
 			return 8 * t * t * t * t
 		p = t - 1
 		return -8 * p * p * p * p + 1
+
+class QuarticEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = QuarticEaseOut(0, 0.5, 0.5)
+		self.f2 = QuarticEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
 
 
 """
@@ -120,6 +150,15 @@ class QuinticEaseInOut(EasingBase):
 		p = (2 * t) - 2
 		return 0.5 * p * p * p * p * p + 1
 
+class QuinticEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = QuinticEaseOut(0, 0.5, 0.5)
+		self.f2 = QuinticEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
 
 """
 Sine easing functions
@@ -139,6 +178,16 @@ class SineEaseOut(EasingBase):
 class SineEaseInOut(EasingBase):
 	def func(self, t):
 		return 0.5 * (1 - math.cos(t * math.pi))
+
+class SineEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = SineEaseOut(0, 0.5, 0.5)
+		self.f2 = SineEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
 
 
 """
@@ -162,6 +211,15 @@ class CircularEaseInOut(EasingBase):
 			return 0.5 * (1 - math.sqrt(1 - 4 * (t * t)))
 		return 0.5 * (math.sqrt(-((2 * t) - 3) * ((2 * t) - 1)) + 1)
 
+class CircularEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = CircularEaseOut(0, 0.5, 0.5)
+		self.f2 = CircularEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
 
 """
 Exponential easing functions
@@ -190,6 +248,16 @@ class ExponentialEaseInOut(EasingBase):
 		if t < 0.5:
 			return 0.5 * math.pow(2, (20 * t) - 10)
 		return -0.5 * math.pow(2, (-20 * t) + 10) + 1
+
+class ExponentialEaseOutIn(EasingBase):
+	def __init__(self, start=0, end=1, duration=1):
+		super().__init__(start, end, duration)
+		self.f1 = ExponentialEaseOut(0, 0.5, 0.5)
+		self.f2 = ExponentialEaseIn(0.5, 1, 0.5)
+	def func(self, t):
+		if t < 0.5:
+			return self.f1(t)
+		return self.f2(t-0.5)
 
 
 """

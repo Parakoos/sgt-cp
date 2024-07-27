@@ -247,7 +247,7 @@ class GameState():
 
 	def get_active_player(self) -> Player | None:
 		if len(self.seat) == 1:
-			return next((p for p in self.players if p.seat in self.seat))
+			return find_thing((p for p in self.players if p.seat == self.seat[0]), None)
 		elif len(self.seat) == 0:
 			return find_thing((p for p in self.players if p.action == 'pr' or p.action == 'se'), None)
 		else:
