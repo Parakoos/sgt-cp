@@ -9,6 +9,7 @@ from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
 import json
 from traceback import print_exception
+from utils.log import log_memory_usage
 
 class SgtConnectionBluetooth(SgtConnection):
 	def __init__(self,
@@ -122,7 +123,7 @@ class SgtConnectionBluetooth(SgtConnection):
 							print_exception(e)
 							self._poll_for_latest_state()
 			else:
-				log.debug('incomplete line: "%s"', last_item[1])
+				# log.debug('incomplete line: "%s"', last_item[1])
 				self.incomplete_line_read = last_item
 				time.sleep(0.05)
 	def handle_new_messages(self) -> None:
@@ -135,6 +136,7 @@ class SgtConnectionBluetooth(SgtConnection):
 			timestamp_offset = self.line_to_process[0] - time.monotonic()
 			)
 		self.line_to_process = None
+		log_memory_usage('Between line and set state')
 		self.view.set_state(new_state)
 		return True
 	def _send(self, value: str|None):

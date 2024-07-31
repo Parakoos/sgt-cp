@@ -22,7 +22,7 @@ PAUSE_SPAWN_PAUSE_SEC = get_float('TABLE_PAUSE_SPAWN_PAUSE_SEC', 0.2)
 # How probable is it that we spawn a new spark?
 PAUSE_SPAWN_PROBABILITY = get_float('TABLE_PAUSE_SPAWN_PROBABILITY', 0.5)
 
-from seated_animation.seated_animation import SgtSeatedAnimation
+from seated_animation.seated_animation import SgtSeatedAnimation, Line
 from view_table_outline import ViewTableOutline
 from game_state import GameState
 import time
@@ -75,6 +75,10 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 				index = round(spark.location) % self.length
 				arr[index] = max(val, arr[index])
 		self.pixels[0:self.length] = arr
+		if self.active_player:
+			seat_def = self.seat_definitions[self.active_player.seat-1]
+			line = Line(self.parent.pixels, seat_def[0], seat_def[1], self.active_player.color.highlight)
+			line.draw()
 		self.pixels.show()
 
 	def on_state_update(self, state: GameState, old_state: GameState):
