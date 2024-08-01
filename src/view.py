@@ -18,7 +18,7 @@ class View():
 			# We have time reminders set, and we are close to performing one of its border crossings.
 			# We should return True from here to mark this view as busy.
 			if self.current_times == None:
-				self.current_times = current_times
+				self.current_times = self.state.get_current_timings()
 				return True
 			if isinstance(self.current_times, CurrentTimes) and (monotonic() - self.current_times.ts) > 1:
 				current_times = self.state.get_current_timings()
