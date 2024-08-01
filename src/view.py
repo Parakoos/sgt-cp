@@ -1,6 +1,6 @@
 import adafruit_logging as logging
 log = logging.getLogger()
-from game_state import GameState, STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED, STATE_RUNNING, STATE_NOT_RUNNING, STATE_SIM_TURN
+from game_state import GameState, STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED, STATE_RUNNING, STATE_NOT_RUNNING, STATE_SIM_TURN, CurrentTimes
 from time import monotonic
 
 
@@ -17,13 +17,14 @@ class View():
 		if self.enable_time_reminder_check and self.state and self.state.time_reminders and self.state.state in (STATE_PLAYING, STATE_SIM_TURN) and monotonic() >= self.time_reminder_check_timeout:
 			# We have time reminders set, and we are close to performing one of its border crossings.
 			# We should return True from here to mark this view as busy.
-			current_times = self.state.get_current_timings()
 			if self.current_times == None:
 				self.current_times = current_times
 				return True
-			elif self.current_times.turn_time == current_times.turn_time:
-				# We haven't made a change in the time. Just return busy
-				return True
+			if isinstance(self.current_times, CurrentTimes) and (monotonic() - self.current_times.ts) > 1:
+				current_times = self.state.get_current_timings()
+				if self.current_times.turn_time == current_times.turn_time:
+					# We haven't made a change in the time. Just return busy
+					return True
 			else:
 				crossed_borders = check_if_crossed_time_border(self.state.time_reminders, self.current_times.turn_time, current_times.turn_time)
 				self.current_times = current_times

@@ -58,21 +58,21 @@ class Player():
 			return f'Player<{self.seat}, {self.color} {self.name} action={self.action}>'
 
 class CurrentTimes():
-	def __init__(self, now: int, turn_time: float, player_time: float, total_play_time: float) -> None:
-		self.now = now
+	def __init__(self, ts: int, turn_time: float, player_time: float, total_play_time: float) -> None:
+		self.ts = ts
 
 		# Count-Up, time taken this turn or pause time or admin time
 		# Count-Down, same as above, but negative values during Delay Time
 		# Sand, time taken out of the sand timer
-		self.turn_time = round(turn_time)
+		self.turn_time = turn_time
 
 		# Count-Up, total time taken, or blank for admin/pause/sim. tur
 		# Count-Down, remaining time bank, or blank for admin/pause/sim. turn
 		# Sand, size (in sec) of the sand timer (it's reset size)
-		self.player_time = round(player_time)
+		self.player_time = player_time
 
 		# Count-Up/Down, total play time, not counting this turn and not admin/pause time
-		self.total_play_time = round(total_play_time)
+		self.total_play_time = total_play_time
 
 	def __repr__(self):
 		return f'CurrentTimes<turn={self.turn_time}, player={self.player_time}, total={self.total_play_time}>'
@@ -257,9 +257,7 @@ class GameState():
 		return find_thing((p for p in self.players if p.seat == seat), None)
 
 	def get_current_timings(self):
-		now = round(time.monotonic())
-		if isinstance(self.current_times, CurrentTimes) and (now - self.current_times.now) < 1:
-			return self.current_times
+		now = time.monotonic()
 
 		if self.timer_mode == None:
 			raise Exception(f'Unkown timer mode: {self.timer_mode}')
