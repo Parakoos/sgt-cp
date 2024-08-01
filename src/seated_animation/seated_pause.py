@@ -64,16 +64,15 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 
 		arr = [0x0 for i in range(self.length)]
 		self.pixels.fill(0x0)
-		if self.line:
-			self.line.pixels = arr
-			self.line.draw()
-			self.line.pixels = None
+
+		# Spawn Sparks
 		if time.monotonic() - self.last_spawn_ts > PAUSE_SPAWN_PAUSE_SEC:
 			self.last_spawn_ts = time.monotonic()
 			if random() < PAUSE_SPAWN_PROBABILITY:
 				start = self.seat_definitions[self.active_player.seat-1][0] if self.active_player else uniform(0, len(self.pixels))
 				end = start + choice([1, -1]) * len(self.pixels) * distance_easing(random())
 				self.sparks.append(Spark(start, end))
+		# Draw Sparks
 		for spark in self.sparks:
 			if spark.transition.loop():
 				self.sparks.remove(spark)
@@ -81,6 +80,14 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 				val = fancy.gamma_adjust(self.color, brightness=spark.brightness).pack()
 				index = round(spark.location) % self.length
 				arr[index] = max(val, arr[index])
+
+		# Draw Line
+		if self.line:
+			self.line.pixels = arr
+			self.line.draw()
+			self.line.pixels = None
+
+		# Show Result
 		self.pixels[0:self.length] = arr
 		self.pixels.show()
 
@@ -89,4 +96,4 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 		self.color = state.color.fancy
 		if self.active_player:
 			seat_def = self.seat_definitions[self.active_player.seat-1]
-			self.line = Line(self.pixels, seat_def[0], seat_def[1], DisplayedColor(fancy_color=self.active_player.color.fancy, brightness=0.1))
+			self.line = Line(self.pixels, seat_def[0], seat_def[1], DisplayedColor(fancy_color=self.active_player.color.fancy, brightness=PAUSE_BRIGHTNESS_LINE))
