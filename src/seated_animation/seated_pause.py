@@ -22,6 +22,8 @@ PAUSE_FADE_OUT_EASE = get_ease('TABLE_PAUSE_FADE_OUT_EASE', 'QuarticEaseIn')
 PAUSE_SPAWN_PAUSE_SEC = get_float('TABLE_PAUSE_SPAWN_PAUSE_SEC', 0.2)
 # How probable is it that we spawn a new spark?
 PAUSE_SPAWN_PROBABILITY = get_float('TABLE_PAUSE_SPAWN_PROBABILITY', 0.5)
+# How many pixels wide should each spark be?
+PAUSE_SPARK_WIDTH = get_float('TABLE_PAUSE_WIDTH', 1)
 
 from seated_animation.seated_animation import SgtSeatedAnimation, Line, FADE_DURATION, FADE_EASE
 from view_table_outline import ViewTableOutline
@@ -29,6 +31,7 @@ from game_state import GameState
 import time
 from random import uniform, choice, random
 from utils.color import DisplayedColor
+from math import modf
 import adafruit_fancyled.adafruit_fancyled as fancy
 
 from utils.transition import PropertyTransition, ParallellTransitionFunctions
@@ -77,9 +80,14 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 			if spark.transition.loop():
 				self.sparks.remove(spark)
 			else:
-				val = fancy.gamma_adjust(self.color, brightness=spark.brightness).pack()
-				index = round(spark.location) % self.length
-				arr[index] = max(val, arr[index])
+				f, i_lower = modf(spark.location-PAUSE_SPARK_WIDTH/2)
+				b_low = (1-f) * spark.brightness
+				arr[int(i_lower) % self.length] = max(arr[int(i_lower) % self.length], fancy.gamma_adjust(self.color, brightness=b_low).pack())
+				f, i_upper = modf(spark.location+PAUSE_SPARK_WIDTH/2)
+				b_high = f * spark.brightness
+				arr[int(i_upper) % self.length] = max(arr[int(i_upper) % self.length], fancy.gamma_adjust(self.color, brightness=b_high).pack())
+				for i_mid in range(i_lower + 1, i_upper):
+					arr[int(i_mid) % self.length] = max(arr[int(i_mid) % self.length], fancy.gamma_adjust(self.color, brightness=spark.brightness).pack())
 
 		# Draw Line
 		if self.line:
