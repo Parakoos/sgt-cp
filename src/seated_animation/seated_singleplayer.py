@@ -9,12 +9,14 @@ HIGHLIGHT_MOVE_SPEED_PPS = get_int('TABLE_HIGHLIGHT_MOVE_SPEED_PPS', 36)
 DOTS_WIDTH = get_float('TABLE_DOTS_WIDTH', 2.0)
 # How many pixels is it between each dot?
 DOTS_SEPARATION = get_float('TABLE_DOTS_SEPARATION', 3.0)
+# How bright are the dots?
+DOTS_BRIGHTNESS = get_float('TABLE_DOTS_BRIGHTNESS', 1.0)
 
 from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition, FADE_EASE, FADE_DURATION, TIME_REMINDER_EASINGS, TIME_REMINDER_MAX_PULSES, TIME_REMINDER_PULSE_DURATION
 from view_table_outline import ViewTableOutline, BLACK
 from game_state import GameState, Player, STATE_PLAYING
 from utils.color import DisplayedColor
-from utils.transition import PropertyTransition, SerialTransitionFunctions, ColorTransitionFunction, ParallellTransitionFunctions
+from utils.transition import PropertyTransition, SerialTransitionFunctions, ColorTransitionFunction, ParallellTransitionFunctions, CallbackTransitionFunction
 import adafruit_fancyled.adafruit_fancyled as fancy
 from math import modf
 import adafruit_logging as logging
@@ -28,6 +30,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 	def __init__(self, parent_view: ViewTableOutline, random_first_player: Player|None = None):
 		super().__init__(parent_view, fade_to_black=(random_first_player==None))
 		self.color_background = BLACK.copy()
+		self.dot_brightness = DOTS_BRIGHTNESS
 		self.seat_line = None
 		self.blinks_left = 0
 		self.blink_transition = None
@@ -61,25 +64,26 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		self.pixels.fill(self.color_background.current_color)
 
 		# Show minute counter
-		non_player_line_length = self.length - self.seat_line.line.length
-		player_line_edge = self.seat_line.line.midpoint + self.seat_line.line.length/2
-		min_fraction, mins = modf(self.parent.state.get_current_timings().turn_time/60)
-		dot_count = mins + 1
-		dots_travel_length = non_player_line_length + mins*(DOTS_WIDTH+DOTS_SEPARATION)
-		time_dots_location_progress = 1 - 2 * (min_fraction if min_fraction < 0.5 else 1-min_fraction)
-		time_dots_location = dots_travel_length * time_dots_location_progress
+		if self.parent.state.state == STATE_PLAYING:
+			non_player_line_length = self.length - self.seat_line.line.length
+			player_line_edge = self.seat_line.line.midpoint + self.seat_line.line.length/2
+			min_fraction, mins = modf(self.parent.state.get_current_timings().turn_time/60)
+			dot_count = mins + 1
+			dots_travel_length = non_player_line_length + mins*(DOTS_WIDTH+DOTS_SEPARATION)
+			time_dots_location_progress = 1 - 2 * (min_fraction if min_fraction < 0.5 else 1-min_fraction)
+			time_dots_location = dots_travel_length * time_dots_location_progress
 
-		for i in range(dot_count):
-			pixel_location = player_line_edge + time_dots_location-i*(DOTS_SEPARATION+DOTS_WIDTH)
-			if player_line_edge <= pixel_location and pixel_location <= (non_player_line_length + player_line_edge):
-				f, i_lower = modf(pixel_location-DOTS_WIDTH/2)
-				b_low = f * self.player_bg_color.brightness + (1-f) * self.player_fg_color.brightness
-				self.pixels[int(i_lower) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_low).pack()
-				f, i_upper = modf(pixel_location+DOTS_WIDTH/2)
-				b_high = (1-f) * self.player_bg_color.brightness + f * self.player_fg_color.brightness
-				self.pixels[int(i_upper) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_high).pack()
-				for i_mid in range(i_lower + 1, i_upper):
-					self.pixels[int(i_mid) % self.length] = self.player_fg_color.current_color
+			for i in range(dot_count):
+				pixel_location = player_line_edge + time_dots_location-i*(DOTS_SEPARATION+DOTS_WIDTH)
+				if player_line_edge <= pixel_location and pixel_location <= (non_player_line_length + player_line_edge):
+					f, i_lower = modf(pixel_location-DOTS_WIDTH/2)
+					b_low = f * self.color_background.brightness + (1-f) * self.dot_brightness
+					self.pixels[int(i_lower) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_low).pack()
+					f, i_upper = modf(pixel_location+DOTS_WIDTH/2)
+					b_high = (1-f) * self.color_background.brightness + f * self.dot_brightness
+					self.pixels[int(i_upper) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_high).pack()
+					for i_mid in range(i_lower + 1, i_upper):
+						self.pixels[int(i_mid) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=self.dot_brightness).pack()
 
 		# Draw the player line and show result
 		self.seat_line.line.draw()
@@ -128,8 +132,14 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			# We want to first fade out the current background color to black,
 			# Then move the player line to the new position, changing its color while doing so,
 			# and finally fade in the background to the new color.
-			trans_fade_out = ColorTransitionFunction(self.color_background, BLACK, FADE_EASE(0, 1, FADE_DURATION))
-			trans_fade_in = ColorTransitionFunction(self.color_background, self.player_bg_color, FADE_EASE(0, 1, FADE_DURATION))
+			trans_fade_out = ParallellTransitionFunctions(
+				CallbackTransitionFunction(FADE_EASE(self.color_background.brightness, 0, FADE_DURATION), lambda b: self.color_background.update(self.color_background.fancy_color, b)),
+				PropertyTransition(self, 'dot_brightness', 0.0, FADE_EASE, FADE_DURATION),
+			)
+			trans_fade_in = ParallellTransitionFunctions(
+				CallbackTransitionFunction(FADE_EASE(0, active_player.color.dim.brightness, FADE_DURATION), lambda b: self.color_background.update(active_player.color.fancy, b)),
+				PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
+			)
 			self.seat_line.transitions = [
 				trans_fade_out,
 				ParallellTransitionFunctions(*line_transitions),

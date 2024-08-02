@@ -19,6 +19,7 @@ class TransitionFunction():
 		"""
 		if self.easing.start == self.easing.end:
 			self.value = self.easing.end
+			self.start_time = monotonic()
 			return True
 
 		if self.start_time == None:
