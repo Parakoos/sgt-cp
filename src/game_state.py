@@ -88,6 +88,13 @@ STATE_RUNNING = 'ru'
 STATE_NOT_RUNNING = 'nr'
 STATE_SIM_TURN = 'si'
 
+STATE_TYPE_MID_TURN = 'mt'
+STATE_TYPE_MID_SIM_TURN = 'ms'
+STATE_TYPE_END_OF_TURN = 'et'
+STATE_TYPE_END_OF_ROUND = 'er'
+STATE_TYPE_BEFORE_GAME = 'bg'
+STATE_TYPE_SETUP_ADMIN = 'se'
+
 TIMER_MODE_COUNT_UP = 'cu'
 TIMER_MODE_COUNT_DOWN = 'cd'
 TIMER_MODE_SAND_TIMER = 'st'
@@ -120,6 +127,7 @@ class GameState():
 				('sgtColorHsv', 'colorHsv'),
 				('sgtTurnTime', 'turnTime'),
 				('sgtState', 'state'),
+				('sgtStateType', 'stateType'),
 				('sgtName', 'name'),
 				('sgtPlayerTime', 'playerTime'),
 				('sgtTotalPlayTime', 'totalPlayTime'),
@@ -188,6 +196,9 @@ class GameState():
 		# Sand, ru/nr/pa/en for running, not running, paused or end
 		# Not Sand, st/en/pa/ad/pl for start, end, pause, admin or playing
 		self.state = get_state_string(state, 'state', STATE_NOT_CONNECTED)
+
+		# mt/ms/et/er/bg/se for Mid-Turn, Mid-Sim-Turn, End-of-Turn, End-of-Round, Before-Game, Setup if in Admin Time
+		self.stateType = get_state_string(state, 'stateType')
 
 		# Count-Up, time taken this turn or pause time or admin time
 		# Count-Down, same as above, but negative values during Delay Time
@@ -324,7 +335,9 @@ class GameState():
 			facts.append(f'v={self.game_state_version}')
 		if (self.timer_mode):
 			facts.append(f'mode={self.timer_mode}')
-		if (self.state):
+		if (self.stateType):
+			facts.append(f'state={self.state}/{self.stateType}')
+		else:
 			facts.append(f'state={self.state}')
 		if (self.turn_time_sec):
 			facts.append(f'turn_time={self.turn_time_sec}')

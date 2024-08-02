@@ -136,21 +136,25 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				CallbackTransitionFunction(FADE_EASE(self.color_background.brightness, 0, FADE_DURATION), lambda b: self.color_background.update(self.color_background.fancy_color, b)),
 				PropertyTransition(self, 'dot_brightness', 0.0, FADE_EASE, FADE_DURATION),
 			)
-			trans_fade_in = ParallellTransitionFunctions(
-				CallbackTransitionFunction(FADE_EASE(0, active_player.color.dim.brightness, FADE_DURATION), lambda b: self.color_background.update(active_player.color.fancy, b)),
-				PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
-			)
 			self.seat_line.transitions = [
 				trans_fade_out,
 				ParallellTransitionFunctions(*line_transitions),
-				trans_fade_in,
 			]
+			if state.stateType != 'et':
+				trans_fade_in = ParallellTransitionFunctions(
+					CallbackTransitionFunction(FADE_EASE(0, active_player.color.dim.brightness, FADE_DURATION), lambda b: self.color_background.update(active_player.color.fancy, b)),
+					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
+				)
+				self.seat_line.transitions.append(trans_fade_in)
 		else:
 			self.seat_line.transitions = []
 			if len(line_transitions) > 0:
 				self.seat_line.transitions.append(ParallellTransitionFunctions(*line_transitions))
 			if self.color_background != self.player_bg_color:
-				self.seat_line.transitions.append(ColorTransitionFunction(self.color_background, self.player_bg_color, easing=FADE_EASE(0, 1, FADE_DURATION)))
+				self.seat_line.transitions.append(ParallellTransitionFunctions(
+					ColorTransitionFunction(self.color_background, self.player_bg_color, easing=FADE_EASE(0, 1, FADE_DURATION)),
+					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
+				))
 
 	def on_time_reminder(self, time_reminder_count: int):
 		self.blinks_left = min(time_reminder_count, TIME_REMINDER_MAX_PULSES)

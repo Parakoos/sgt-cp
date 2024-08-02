@@ -5,6 +5,7 @@ from time import monotonic
 
 
 class View():
+	current_times: CurrentTimes
 	def __init__(self):
 		self.state = None
 		self.polling_delays = []
@@ -20,12 +21,11 @@ class View():
 			if self.current_times == None:
 				self.current_times = self.state.get_current_timings()
 				return True
-			if isinstance(self.current_times, CurrentTimes) and (monotonic() - self.current_times.ts) > 1:
+			if (monotonic() - self.current_times.ts) > 1:
 				current_times = self.state.get_current_timings()
 				if self.current_times.turn_time == current_times.turn_time:
 					# We haven't made a change in the time. Just return busy
 					return True
-			else:
 				crossed_borders = check_if_crossed_time_border(self.state.time_reminders, self.current_times.turn_time, current_times.turn_time)
 				self.current_times = current_times
 				if crossed_borders > 0:

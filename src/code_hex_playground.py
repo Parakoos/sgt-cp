@@ -21,7 +21,7 @@ ORIENTATION_CHANGE_DELAY = 1			# How long to debounce changes in orientation
 BLE_DEVICE_NAME = "Hex Table (Playground)"
 BLUETOOTH_FIELD_DIVIDER = ';'
 # BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColor','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtGameStateVersion','sgtName','sgtSeat','sgtTs','sgtPlayerSeats','sgtPlayerColors','sgtPlayerNames','sgtPlayerActions','sgtActionPrimary','sgtActionInactive','sgtActionSecondary','sgtActionAdmin','sgtActionPause','sgtActionUndo']
-BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColorHsv','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime', 'sgtTimeReminders','sgtPlayerSeats','sgtPlayerColorsHsv','sgtPlayerActions','sgtSeat']
+BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtStateType','sgtColorHsv','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime', 'sgtTimeReminders','sgtPlayerSeats','sgtPlayerColorsHsv','sgtPlayerActions','sgtSeat']
 
 # ---------- SHARED IMPORTS -------------#
 import board
