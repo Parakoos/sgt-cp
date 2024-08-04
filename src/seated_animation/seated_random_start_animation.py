@@ -34,7 +34,7 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 		rotations_to_spin = randint(START_GAME_SPIN_MIN_ROTATIONS, START_GAME_SPIN_MAX_ROTATIONS)
 		start_px = selected_player_midpoint + random() * self.length
 		end_px = selected_player_midpoint + rotations_to_spin * self.length
-		self.line = Line(pixels=self.parent.pixels, midpoint=start_px, length=selected_seat_definition[1], color=BLACK.copy())
+		self.line = Line(midpoint=start_px, length=selected_seat_definition[1], color=BLACK.copy())
 		self.spin_transition = RampUpDownTransitionFunction(START_GAME_SPIN_SPEED_PPS, start_px, end_px, START_GAME_SPIN_EASE_IN, START_GAME_SPIN_EASE_IN_DURATION, START_GAME_SPIN_EASE_OUT, START_GAME_SPIN_EASE_OUT_DURATION)
 		self.bg_color = BLACK.copy()
 		self.color_transition_fg = None
@@ -77,7 +77,7 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 				self.color_transition_bg = None
 
 		self.pixels.fill(self.bg_color.current_color)
-		self.line.draw()
+		self.line.draw(self.pixels)
 		self.pixels.show()
 
 		if (done and len(self.parent.seats_with_pressed_keys) > 1):

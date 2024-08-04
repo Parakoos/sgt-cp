@@ -1,5 +1,5 @@
-from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition, FADE_EASE, FADE_DURATION, TIME_REMINDER_EASINGS, TIME_REMINDER_MAX_PULSES, TIME_REMINDER_PULSE_DURATION
-from view_table_outline import ViewTableOutline, BLACK
+from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition, TIME_REMINDER_EASINGS, TIME_REMINDER_MAX_PULSES, TIME_REMINDER_PULSE_DURATION
+from view_table_outline import ViewTableOutline, BLACK, FADE_EASE, FADE_DURATION
 from game_state import GameState, STATE_START, STATE_SIM_TURN, STATE_ADMIN, Player
 from utils.transition import PropertyTransition, SerialTransitionFunctions, ColorTransitionFunction, ParallellTransitionFunctions
 from utils.find import find_thing
@@ -11,7 +11,7 @@ log = logging.getLogger()
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 	def __init__(self, parent_view: ViewTableOutline):
 		super().__init__(parent_view)
-		self.seat_lines = list(LineTransition(Line(pixels=self.parent.pixels, midpoint=s[0], length=0, color=BLACK.copy()), transitions=[]) for s in self.seat_definitions)
+		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK.copy()), transitions=[]) for s in self.seat_definitions)
 		self.blinks_left = 0
 		self.blink_transition = None
 		self.current_times = None
@@ -35,7 +35,7 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 					seat_line.transitions = seat_line.transitions[1:]
 			has_more_transitions = has_more_transitions or len(seat_line.transitions) > 0
 			seat_line.line.sparkle = self.parent.state.state == STATE_START and (seat_0+1) in self.parent.seats_with_pressed_keys
-			seat_line.line.draw()
+			seat_line.line.draw(self.pixels)
 		self.pixels.show()
 		self.first_player_check()
 		return has_more_transitions or self.blinks_left > 0 or self.blink_transition != None

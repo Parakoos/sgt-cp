@@ -1,8 +1,13 @@
-from utils.settings import get_int
+from utils.settings import get_int, get_ease, get_float
 from sgt_connection import SgtConnection
 
 # Speed of comet animations, in Pixels/Second.
 COMET_SPEED_PPS = get_int('TABLE_COMET_SPEED_PPS', 10)
+
+# Easing function for color fades
+FADE_EASE = get_ease('TABLE_FADE_EASE', 'LinearInOut')
+# Duration of color fades
+FADE_DURATION = get_float('TABLE_FADE_DURATION', 0.8)
 
 from view import View
 from game_state import GameState
@@ -11,6 +16,7 @@ from adafruit_led_animation.animation.rainbowcomet import RainbowComet
 from adafruit_led_animation.animation.comet import Comet
 from sgt_animation import SgtAnimation, SgtSolid
 from utils.color import BLUE as BLUE_PC, RED as RED_PC, BLACK as BLACK_PC
+from utils.transition import SerialTransitionFunctions, PropertyTransition
 import adafruit_logging as logging
 from gc import collect, mem_free
 log = logging.getLogger()
@@ -39,8 +45,24 @@ class ViewTableOutline(View):
 		self.sgt_connection = connection
 	def animate(self) -> bool:
 		shared_stuff_busy = super().animate()
-		this_animation_busy = self.animation.animate()
+		if self.fade_to_black_tranny != None:
+			if self.fade_to_black_tranny.loop():
+				self.fade_to_black_tranny = None
+				self.fade_out_animation = None
+			elif len(self.fade_to_black_tranny.fns) < 2:
+				self.fade_out_animation = None
+		if self.fade_out_animation:
+			this_animation_busy = self.fade_out_animation.animate()
+		else:
+			this_animation_busy = self.animation.animate()
 		return this_animation_busy or shared_stuff_busy
+	def fade_to_new_animation(self, new_animation):
+		self.fade_out_animation = self.animation
+		self.animation = new_animation
+		self.fade_to_black_tranny = SerialTransitionFunctions([
+			PropertyTransition(self.pixels, 'brightness', 0, FADE_EASE, FADE_DURATION),
+			PropertyTransition(self.pixels, 'brightness', 1, FADE_EASE, FADE_DURATION)
+		])
 	def set_connection_progress_text(self, text):
 		pass
 	def switch_to_playing(self, state: GameState, old_state: GameState):
@@ -61,7 +83,7 @@ class ViewTableOutline(View):
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_paused after')
 		if not isinstance(self.animation, SgtPauseAnimation):
-			self.animation = SgtPauseAnimation(self)
+			self.fade_to_new_animation(SgtPauseAnimation(self))
 	def switch_to_sandtimer_running(self, state: GameState, old_state: GameState):
 		raise Exception('Not implemented yet')
 	def switch_to_sandtimer_not_running(self, state: GameState, old_state: GameState):
@@ -72,28 +94,26 @@ class ViewTableOutline(View):
 		self._activate_multiplayer_animation()
 	def switch_to_no_game(self):
 		super().switch_to_no_game()
-		self.pixels.fill(0x0)
-		self.animation = SgtAnimation(
+		self.fade_to_new_animation(SgtAnimation(
 			BLACK,
 			(RainbowComet(self.pixels, self.comet_refresh_rate, tail_length=round(len(self.pixels)/2), ring=True), None, True),
-		)
+		))
 	def switch_to_not_connected(self):
-		self.pixels.fill(0x0)
 		super().switch_to_not_connected()
-		self.animation = SgtAnimation(
+		self.fade_to_new_animation(SgtAnimation(
 			BLUE,
 			(Comet(self.pixels, self.comet_refresh_rate, 0x0, tail_length=round(len(self.pixels)/2), ring=True), None, True),
-		)
+		))
 	def switch_to_error(self):
 		super().switch_to_error()
 		from seated_animation.seated_error import SgtErrorAnimation
 		if not isinstance(self.animation, SgtErrorAnimation):
-			self.animation = SgtErrorAnimation(self)
+			self.fade_to_new_animation(SgtErrorAnimation(self))
 	def switch_to_random_start_animation(self):
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation b4')
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation after')
-		self.animation = SgtSeatedRandomStartAnimation(self)
+		self.fade_to_new_animation(SgtSeatedRandomStartAnimation(self))
 	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		from seated_animation.seated_animation import SgtSeatedAnimation
 		if isinstance(self.animation, SgtSeatedAnimation):
@@ -103,12 +123,15 @@ class ViewTableOutline(View):
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation after')
 		if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
-			self.animation = SgtSeatedMultiplayerAnimation(self)
+			self.fade_to_new_animation(SgtSeatedMultiplayerAnimation(self))
 	def _activate_singleplayer_animation(self):
 		log.debug(f'--> Free memory: {mem_free():,} @ _activate_singleplayer_animation')
 		if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
 			random_first_player = None if not isinstance(self.animation, SgtSeatedRandomStartAnimation) else self.animation.selected_player
-			self.animation = SgtSeatedSingleplayerAnimation(self, random_first_player)
+			if random_first_player == None:
+				self.fade_to_new_animation(SgtSeatedSingleplayerAnimation(self))
+			else:
+				self.animation = SgtSeatedSingleplayerAnimation(self, random_first_player)
 	def on_time_reminder(self, time_reminder_count: int):
 		from seated_animation.seated_animation import SgtSeatedAnimation
 		if isinstance(self.animation, SgtSeatedAnimation):
@@ -119,7 +142,7 @@ class ViewTableOutline(View):
 			self.animation.on_pressed_keys_change()
 	def begin_sim_turn_selection(self, seat: int):
 		if self.state.allow_sim_turn_start():
-			self.animation = SgtSeatedSimTurnSelection(self, seat)
+			self.fade_to_new_animation(SgtSeatedSimTurnSelection(self, seat))
 
 from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
 from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation

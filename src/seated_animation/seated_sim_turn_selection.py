@@ -1,5 +1,5 @@
-from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition, FADE_EASE, FADE_DURATION
-from view_table_outline import ViewTableOutline, BLACK
+from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition
+from view_table_outline import ViewTableOutline, BLACK, FADE_EASE, FADE_DURATION
 from utils.transition import PropertyTransition
 import adafruit_logging as logging
 log = logging.getLogger()
@@ -13,14 +13,14 @@ class SgtSeatedSimTurnSelection(SgtSeatedAnimation):
 			seat = seat_0+1
 			player = self.parent.state.get_player_by_seat(seat)
 			if player == None:
-				line = Line(pixels=self.parent.pixels, midpoint=s[0], length=0, color=BLACK.copy())
+				line = Line(midpoint=s[0], length=0, color=BLACK.copy())
 			elif seat == initiator_seat:
-				line = Line(pixels=self.parent.pixels, midpoint=s[0], length=s[1], color=player.color.dim)
+				line = Line(midpoint=s[0], length=s[1], color=player.color.dim)
 				line.sparkle = True
 			elif seat in self.parent.seats_with_pressed_keys:
-				line = Line(pixels=self.parent.pixels, midpoint=s[0], length=s[1], color=player.color.dim)
+				line = Line(midpoint=s[0], length=s[1], color=player.color.dim)
 			else:
-				line = Line(pixels=self.parent.pixels, midpoint=s[0], length=0, color=player.color.dim)
+				line = Line(midpoint=s[0], length=0, color=player.color.dim)
 			self.seat_lines.append(LineTransition(line, []))
 		self.initiator_seat = initiator_seat
 		self.selection_completed = False
@@ -32,7 +32,7 @@ class SgtSeatedSimTurnSelection(SgtSeatedAnimation):
 			if len(seat_line.transitions) > 0:
 				if(seat_line.transitions[0].loop()):
 					seat_line.transitions = seat_line.transitions[1:]
-			seat_line.line.draw()
+			seat_line.line.draw(self.pixels)
 		self.pixels.show()
 		return False
 

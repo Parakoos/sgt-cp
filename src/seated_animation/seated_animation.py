@@ -1,10 +1,5 @@
 from utils.settings import get_int, get_float, get_ease
 
-# Easing function for color fades
-FADE_EASE = get_ease('TABLE_FADE_EASE', 'LinearInOut')
-# Duration of color fades
-FADE_DURATION = get_float('TABLE_FADE_DURATION', 0.8)
-
 # Easing functions to and from a warning highlight, mostly during time reminders.
 TIME_REMINDER_EASINGS = (get_ease('TABLE_TIME_REMINDER_EASE_IN', 'CubicEaseInOut'), get_ease('TABLE_TIME_REMINDER_EASE_OUT', 'CubicEaseInOut'))
 # The duration of a warning
@@ -28,23 +23,23 @@ from utils.transition import TransitionFunction, SerialTransitionFunctions, Prop
 from random import uniform, choice
 import adafruit_fancyled.adafruit_fancyled as fancy
 import adafruit_logging as logging
+from math import modf
 log = logging.getLogger()
 
 class Line():
 	sparkles: list[tuple[int, SerialTransitionFunctions]]
-	def __init__(self, pixels: PixelBuf, midpoint: float, length: float, color: DisplayedColor) -> None:
-		self.pixels = pixels
-		self.midpoint = midpoint % len(pixels)
+	def __init__(self, midpoint: float, length: float, color: DisplayedColor) -> None:
+		self.midpoint = midpoint
 		self.length = length
 		self.color = color
 		self.sparkle = False
 		self.sparkles = list()
-	def draw(self):
+	def draw(self, pixels: list[int]):
 		lower_bound = round(self.midpoint - (self.length/2))
 		upper_bound = round(self.midpoint + (self.length/2))
 		diff = upper_bound - lower_bound
 		for n in range(lower_bound, upper_bound):
-			self.pixels[n % len(self.pixels)] = self.color.current_color
+			pixels[n % len(pixels)] = self.color.current_color
 		if self.sparkle:
 			if len(self.sparkles) < round(self.length * SPARKLE_COVER):
 				unused_indices = [i for i in range(diff)]
@@ -66,7 +61,7 @@ class Line():
 			else:
 				progress = tranny.value
 				brightness = self.color.brightness * (1-progress) + progress
-				self.pixels[(lower_bound + spark[0]) % len(self.pixels)] = fancy.gamma_adjust(self.color.fancy_color, brightness=brightness).pack()
+				pixels[(lower_bound + spark[0]) % len(pixels)] = fancy.gamma_adjust(self.color.fancy_color, brightness=brightness).pack()
 
 	def __repr__(self):
 		facts = []
@@ -91,19 +86,20 @@ class LineTransition():
 		return f"<LineTransition: {', '.join(facts)}>"
 
 class SgtSeatedAnimation():
-	def __init__(self, parent_view: ViewTableOutline, fade_to_black=True):
+	def __init__(self, parent_view: ViewTableOutline):
 		self.parent = parent_view
 		self.pixels=parent_view.pixels
 		self.seat_definitions = parent_view.seat_definitions
 		self.length = len(self.pixels)
 
-		if fade_to_black:
-			tranny = PropertyTransition(self.pixels, 'brightness', 0, FADE_EASE, FADE_DURATION)
-			while not tranny.loop():
-				self.pixels.show()
-			self.pixels.fill(0x0)
-			self.pixels.show()
-			self.pixels.brightness = 1
+	def calc_dot(self, point: float, width: float, brightness: float, fade_into_brightness: float = 0.0):
+		f, i_lower = modf(point-width/2)
+		i_lower = int(i_lower)
+		b_low = f * fade_into_brightness + (1-f) * brightness
+		f, i_upper = modf(point+width/2)
+		i_upper = int(i_upper)
+		b_high = (1-f) * fade_into_brightness + f * brightness
+		return (i_lower % self.length, b_low, i_upper % self.length, b_high, range(i_lower + 1, i_upper))
 
 	def on_state_update(self, state: GameState, old_state: GameState):
 		pass
