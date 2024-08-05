@@ -111,9 +111,6 @@ class ViewTableOutline(View):
 		if not isinstance(self.animation, SgtErrorAnimation):
 			self.fade_to_new_animation(SgtErrorAnimation(self))
 	def switch_to_random_start_animation(self):
-		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation b4')
-		collect()
-		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation after')
 		from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
 		self.fade_to_new_animation(SgtSeatedRandomStartAnimation(self))
 	def on_state_update(self, state: GameState|None, old_state: GameState|None):
@@ -121,14 +118,10 @@ class ViewTableOutline(View):
 		if isinstance(self.animation, SgtSeatedAnimation):
 			self.animation.on_state_update(state, old_state)
 	def _activate_multiplayer_animation(self):
-		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation b4')
-		collect()
-		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation after')
 		from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
 		if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
 			self.fade_to_new_animation(SgtSeatedMultiplayerAnimation(self))
 	def _activate_singleplayer_animation(self):
-		log.debug(f'--> Free memory: {mem_free():,} @ _activate_singleplayer_animation')
 		from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
 		if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
 			from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation

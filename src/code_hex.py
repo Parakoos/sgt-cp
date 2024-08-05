@@ -98,6 +98,7 @@ def on_connect():
 	for btn_pin in BUTTON_PINS:
 		buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=3, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
