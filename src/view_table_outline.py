@@ -82,6 +82,7 @@ class ViewTableOutline(View):
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_paused b4')
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_paused after')
+		from seated_animation.seated_pause import SgtPauseAnimation
 		if not isinstance(self.animation, SgtPauseAnimation):
 			self.fade_to_new_animation(SgtPauseAnimation(self))
 	def switch_to_sandtimer_running(self, state: GameState, old_state: GameState):
@@ -113,6 +114,7 @@ class ViewTableOutline(View):
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation b4')
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ switch_to_random_start_animation after')
+		from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
 		self.fade_to_new_animation(SgtSeatedRandomStartAnimation(self))
 	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		from seated_animation.seated_animation import SgtSeatedAnimation
@@ -122,11 +124,14 @@ class ViewTableOutline(View):
 		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation b4')
 		collect()
 		log.debug(f'--> Free memory: {mem_free():,} @ _activate_multiplayer_animation after')
+		from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
 		if not isinstance(self.animation, SgtSeatedMultiplayerAnimation):
 			self.fade_to_new_animation(SgtSeatedMultiplayerAnimation(self))
 	def _activate_singleplayer_animation(self):
 		log.debug(f'--> Free memory: {mem_free():,} @ _activate_singleplayer_animation')
+		from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
 		if not isinstance(self.animation, SgtSeatedSingleplayerAnimation):
+			from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
 			random_first_player = None if not isinstance(self.animation, SgtSeatedRandomStartAnimation) else self.animation.selected_player
 			if random_first_player == None:
 				self.fade_to_new_animation(SgtSeatedSingleplayerAnimation(self))
@@ -138,14 +143,10 @@ class ViewTableOutline(View):
 			self.animation.on_time_reminder(time_reminder_count)
 	def on_pressed_seats_change(self, seats: set[int]):
 		self.seats_with_pressed_keys = seats
+		from seated_animation.seated_sim_turn_selection import SgtSeatedSimTurnSelection
 		if isinstance(self.animation, SgtSeatedSimTurnSelection):
 			self.animation.on_pressed_keys_change()
 	def begin_sim_turn_selection(self, seat: int):
 		if self.state.allow_sim_turn_start():
+			from seated_animation.seated_sim_turn_selection import SgtSeatedSimTurnSelection
 			self.fade_to_new_animation(SgtSeatedSimTurnSelection(self, seat))
-
-from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
-from seated_animation.seated_singleplayer import SgtSeatedSingleplayerAnimation
-from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
-from seated_animation.seated_pause import SgtPauseAnimation
-from seated_animation.seated_sim_turn_selection import SgtSeatedSimTurnSelection

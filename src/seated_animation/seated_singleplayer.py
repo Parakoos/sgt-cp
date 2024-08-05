@@ -115,16 +115,18 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			dot_count = mins + 1
 			dots_travel_length = non_player_line_length + mins*(DOTS_WIDTH+DOTS_SEPARATION)
 			time_dots_location_progress = 1 - 2 * (min_fraction if min_fraction < 0.5 else 1-min_fraction)
+			last_dot_index = 0 if min_fraction < 0.5 else mins
 			time_dots_location = dots_travel_length * time_dots_location_progress
 
 			for i in range(dot_count):
 				pixel_location = player_line_edge + time_dots_location-i*(DOTS_SEPARATION+DOTS_WIDTH)
 				if player_line_edge <= pixel_location and pixel_location <= (non_player_line_length + player_line_edge):
-					i_low, b_low, i_high, b_high, mids = self.calc_dot(pixel_location, DOTS_WIDTH, self.dot_brightness, self.color_background.brightness)
+					max_b = self.dot_brightness if i != last_dot_index else (min_fraction * self.dot_brightness) + ((1-min_fraction) * self.color_background.brightness)
+					i_low, b_low, i_high, b_high, mids = self.calc_dot(pixel_location, DOTS_WIDTH, max_b, self.color_background.brightness)
 					arr[i_low] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_low).pack()
 					arr[i_high] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_high).pack()
 					for i_mid in mids:
-						arr[int(i_mid) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=self.dot_brightness).pack()
+						arr[int(i_mid) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=max_b).pack()
 		elif self.parent.state.state == STATE_ADMIN:
 			# Spawn Sparks
 			if monotonic() - self.last_spawn_ts > SPARK_SPAWN_PAUSE_SEC:
