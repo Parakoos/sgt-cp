@@ -198,7 +198,7 @@ class GameState():
 		self.state = get_state_string(state, 'state', STATE_NOT_CONNECTED)
 
 		# mt/ms/et/er/bg/se for Mid-Turn, Mid-Sim-Turn, End-of-Turn, End-of-Round, Before-Game, Setup if in Admin Time
-		self.stateType = get_state_string(state, 'stateType')
+		self.state_type = get_state_string(state, 'stateType')
 
 		# Count-Up, time taken this turn or pause time or admin time
 		# Count-Down, same as above, but negative values during Delay Time
@@ -247,14 +247,7 @@ class GameState():
 		return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
 	def allow_sim_turn_start(self):
-		if self.state == STATE_PLAYING:
-			return True
-		if self.state != STATE_ADMIN:
-			return False
-		if self.action_primary == None:
-			# We cannot know for sure what kind of admin state we are in...
-			return True
-		return "resumeTurn" in self.action_primary.action
+		return self.state == STATE_PLAYING or (self.state == STATE_ADMIN and self.state_type != STATE_TYPE_MID_TURN and self.state_type != STATE_TYPE_MID_SIM_TURN)
 
 	def get_active_player(self) -> Player | None:
 		if len(self.seat) == 1:
@@ -335,8 +328,8 @@ class GameState():
 			facts.append(f'v={self.game_state_version}')
 		if (self.timer_mode):
 			facts.append(f'mode={self.timer_mode}')
-		if (self.stateType):
-			facts.append(f'state={self.state}/{self.stateType}')
+		if (self.state_type):
+			facts.append(f'state={self.state}/{self.state_type}')
 		else:
 			facts.append(f'state={self.state}')
 		if (self.turn_time_sec):

@@ -122,7 +122,7 @@ class SgtConnection:
 			return _failure(on_failure)
 
 	def enqueue_send_start_sim_turn(self, seats: set[int]):
-		if self.view.state != None and self.view.state.state in [STATE_ADMIN, STATE_PLAYING]:
+		if self.view.state != None and self.view.state.allow_sim_turn_start():
 			return 'StartSimTurn'
 		else:
 			return None

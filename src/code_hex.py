@@ -68,7 +68,6 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 		if presses == 1:
 			sgt_connection.enqueue_send_toggle_admin(on_success=on_success)
 		elif presses == 2:
-			# sgt_connection.enqueue_send_toggle_pause(on_success=on_success)
 			if view.state.allow_sim_turn_start():
 				seat = BUTTON_PINS.index(btn_pin) + 1
 				viewTableOutline.begin_sim_turn_selection(seat)
@@ -81,7 +80,8 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			sgt_connection.enqueue_send_primary(seat=seat, on_success=on_success)
 		elif presses == 2:
 			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success)
-
+		elif presses == 3:
+			sgt_connection.enqueue_send_toggle_pause(on_success=on_success)
 def pressed_keys_update_callback(pressed_keys: set[Pin]):
 	global sim_turn_selection_in_progress
 	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))

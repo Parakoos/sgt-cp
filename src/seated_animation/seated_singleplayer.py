@@ -203,7 +203,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				trans_fade_out,
 				ParallellTransitionFunctions(*line_transitions),
 			]
-			if state.stateType != 'et':
+			if state.state_type != 'et':
 				trans_fade_in = ParallellTransitionFunctions(
 					CallbackTransitionFunction(FADE_EASE(0, active_player.color.dim.brightness, FADE_DURATION), lambda b: self.color_background.update(active_player.color.fancy, b)),
 					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),

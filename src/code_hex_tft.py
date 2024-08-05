@@ -33,7 +33,8 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 		if presses == 1:
 			sgt_connection.enqueue_send_toggle_admin()
 		elif presses == 2:
-			sgt_connection.enqueue_send_toggle_pause()
+			# sgt_connection.enqueue_send_toggle_pause()
+			sgt_connection.enqueue_send_start_sim_turn(set([1,2]))
 		elif presses == 3:
 			sgt_connection.enqueue_send_undo()
 		elif presses == 4:
