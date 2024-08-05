@@ -38,10 +38,10 @@ SPARK_SPAWN_PROBABILITY = get_float('TABLE_SPARK_SPAWN_PROBABILITY', 0.5)
 SPARK_SPARK_WIDTH = get_float('TABLE_SPARK_WIDTH', 1)
 
 from seated_animation.seated_animation import SgtSeatedAnimation, Line, LineTransition, TIME_REMINDER_EASINGS, TIME_REMINDER_MAX_PULSES, TIME_REMINDER_PULSE_DURATION
-from view_table_outline import ViewTableOutline, BLACK, FADE_EASE, FADE_DURATION
+from view_table_outline import ViewTableOutline, FADE_EASE, FADE_DURATION
 from game_state import GameState, Player, STATE_PLAYING, STATE_ADMIN
-from utils.color import DisplayedColor
-from utils.transition import PropertyTransition, SerialTransitionFunctions, ColorTransitionFunction, ParallellTransitionFunctions, CallbackTransitionFunction
+from utils.color import LED_BRIGHTNESS_NORMAL, LED_BRIGHTNESS_HIGHLIGHT
+from utils.transition import PropertyTransition, SerialTransitionFunctions, ColorTransitionFunction, ParallellTransitionFunctions
 import adafruit_fancyled.adafruit_fancyled as fancy
 from random import uniform, choice, random
 from time import monotonic
@@ -65,13 +65,12 @@ class Spark():
 
 class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 	seat_line: LineTransition
-	color_background: DisplayedColor
 	blink_transition: SerialTransitionFunctions | None
 	sparks: list[Spark]
 
 	def __init__(self, parent_view: ViewTableOutline, random_first_player: Player|None = None):
 		super().__init__(parent_view)
-		self.color_background = BLACK.copy()
+		self.bg_brightness = 0.0
 		self.dot_brightness = DOTS_BRIGHTNESS
 		self.seat_line = None
 		self.blinks_left = 0
@@ -82,7 +81,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		if random_first_player:
 			player_line_midpoint, player_line_length = self.seat_definitions[random_first_player.seat-1]
 			self.seat_line = LineTransition(Line(player_line_midpoint, player_line_length, random_first_player.color.highlight), [])
-			self.color_background = random_first_player.color.dim
+			self.bg_brightness = LED_BRIGHTNESS_NORMAL
 			self.seat_line.line.sparkle = True
 
 	def animate(self):
@@ -94,8 +93,8 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		if self.blink_transition == None and self.blinks_left > 0:
 			self.blinks_left = self.blinks_left - 1
 			self.blink_transition = SerialTransitionFunctions([
-				ColorTransitionFunction(self.color_background, self.player_fg_color, TIME_REMINDER_EASINGS[0](0, 1, TIME_REMINDER_PULSE_DURATION/2)),
-				ColorTransitionFunction(self.color_background, self.player_bg_color, TIME_REMINDER_EASINGS[1](0, 1, TIME_REMINDER_PULSE_DURATION/2)),
+				PropertyTransition(self, 'bg_brightness', LED_BRIGHTNESS_HIGHLIGHT, TIME_REMINDER_EASINGS[0], TIME_REMINDER_PULSE_DURATION/2),
+				PropertyTransition(self, 'bg_brightness', self.bg_brightness, TIME_REMINDER_EASINGS[1], TIME_REMINDER_PULSE_DURATION/2),
 			])
 		if self.blink_transition != None and self.blink_transition.loop():
 			self.blink_transition = None
@@ -105,7 +104,9 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				self.seat_line.line.midpoint = self.seat_line.line.midpoint % self.length
 
 		# Set BG color
-		arr = [self.color_background.current_color for i in range(self.length)]
+		line_fancy = self.seat_line.line.color.fancy_color
+		bg_color_int = fancy.gamma_adjust(line_fancy, brightness=self.bg_brightness).pack()
+		arr = [bg_color_int for i in range(self.length)]
 
 		# Show minute counter
 		if self.parent.state.state == STATE_PLAYING:
@@ -121,12 +122,12 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			for i in range(dot_count):
 				pixel_location = player_line_edge + time_dots_location-i*(DOTS_SEPARATION+DOTS_WIDTH)
 				if player_line_edge <= pixel_location and pixel_location <= (non_player_line_length + player_line_edge):
-					max_b = self.dot_brightness if i != last_dot_index else (min_fraction * self.dot_brightness) + ((1-min_fraction) * self.color_background.brightness)
-					i_low, b_low, i_high, b_high, mids = self.calc_dot(pixel_location, DOTS_WIDTH, max_b, self.color_background.brightness)
-					arr[i_low] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_low).pack()
-					arr[i_high] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=b_high).pack()
+					max_b = self.dot_brightness if i != last_dot_index else (min_fraction * self.dot_brightness) + ((1-min_fraction) * self.bg_brightness)
+					i_low, b_low, i_high, b_high, mids = self.calc_dot(pixel_location, DOTS_WIDTH, max_b, self.bg_brightness)
+					arr[i_low] = fancy.gamma_adjust(line_fancy, brightness=b_low).pack()
+					arr[i_high] = fancy.gamma_adjust(line_fancy, brightness=b_high).pack()
 					for i_mid in mids:
-						arr[int(i_mid) % self.length] = fancy.gamma_adjust(self.color_background.fancy_color, brightness=max_b).pack()
+						arr[int(i_mid) % self.length] = fancy.gamma_adjust(line_fancy, brightness=max_b).pack()
 		elif self.parent.state.state == STATE_ADMIN:
 			# Spawn Sparks
 			if monotonic() - self.last_spawn_ts > SPARK_SPAWN_PAUSE_SEC:
@@ -141,10 +142,10 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 					self.sparks.remove(spark)
 				else:
 					i_low, b_low, i_high, b_high, mids = self.calc_dot(spark.location, SPARK_SPARK_WIDTH, spark.brightness)
-					arr[i_low] = max(arr[i_low], fancy.gamma_adjust(self.parent.state.color.fancy, brightness=b_low).pack())
-					arr[i_high] = max(arr[i_high], fancy.gamma_adjust(self.parent.state.color.fancy, brightness=b_high).pack())
+					arr[i_low] = max(arr[i_low], fancy.gamma_adjust(line_fancy, brightness=b_low).pack())
+					arr[i_high] = max(arr[i_high], fancy.gamma_adjust(line_fancy, brightness=b_high).pack())
 					for i_mid in mids:
-						arr[int(i_mid) % self.length] = max(arr[int(i_mid) % self.length], fancy.gamma_adjust(self.parent.state.color.fancy, brightness=spark.brightness).pack())
+						arr[int(i_mid) % self.length] = max(arr[int(i_mid) % self.length], fancy.gamma_adjust(line_fancy, brightness=spark.brightness).pack())
 
 		# Draw the player line and show result
 		self.seat_line.line.draw(arr)
@@ -196,7 +197,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			# Then move the player line to the new position, changing its color while doing so,
 			# and finally fade in the background to the new color.
 			trans_fade_out = ParallellTransitionFunctions(
-				CallbackTransitionFunction(FADE_EASE(self.color_background.brightness, 0, FADE_DURATION), lambda b: self.color_background.update(self.color_background.fancy_color, b)),
+				PropertyTransition(self, 'bg_brightness', 0.0, FADE_EASE, FADE_DURATION),
 				PropertyTransition(self, 'dot_brightness', 0.0, FADE_EASE, FADE_DURATION),
 			)
 			self.seat_line.transitions = [
@@ -205,7 +206,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			]
 			if state.state_type != 'et':
 				trans_fade_in = ParallellTransitionFunctions(
-					CallbackTransitionFunction(FADE_EASE(0, active_player.color.dim.brightness, FADE_DURATION), lambda b: self.color_background.update(active_player.color.fancy, b)),
+					PropertyTransition(self, 'bg_brightness', LED_BRIGHTNESS_NORMAL, FADE_EASE, FADE_DURATION),
 					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
 				)
 				self.seat_line.transitions.append(trans_fade_in)
@@ -213,9 +214,9 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			self.seat_line.transitions = []
 			if len(line_transitions) > 0:
 				self.seat_line.transitions.append(ParallellTransitionFunctions(*line_transitions))
-			if self.color_background != self.player_bg_color:
+			if self.seat_line.line.color != self.player_bg_color:
 				self.seat_line.transitions.append(ParallellTransitionFunctions(
-					ColorTransitionFunction(self.color_background, self.player_bg_color, easing=FADE_EASE(0, 1, FADE_DURATION)),
+					ColorTransitionFunction(self.seat_line.line.color, self.player_bg_color, easing=FADE_EASE(0, 1, FADE_DURATION)),
 					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
 				))
 
