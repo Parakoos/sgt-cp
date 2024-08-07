@@ -165,12 +165,9 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 		if self.seat_line == None:
 			self.seat_line = LineTransition(Line(player_line_midpoint, 0, active_player.color.black), [])
 
-		line_transitions = []
+		trannies = []
 
 		about_to_start = state.get_current_timings().total_play_time == 0
-
-		self.player_bg_color = active_player.color.dim if state.state == STATE_PLAYING or about_to_start else None
-		self.player_fg_color = active_player.color.highlight
 
 		line = self.seat_line.line
 		line.sparkle = about_to_start
@@ -184,41 +181,39 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 			line_ease_duration = min(steps_if_adding, steps_if_subtracting)/HIGHLIGHT_MOVE_SPEED_PPS
 			line_ease = HIGHLIGHT_MOVE_EASE
 			if (steps_if_adding <= steps_if_subtracting):
-				line_transitions.append(PropertyTransition(line, 'midpoint', from_pixel+steps_if_adding, line_ease, line_ease_duration))
+				trannies.append(PropertyTransition(line, 'midpoint', from_pixel+steps_if_adding, line_ease, line_ease_duration))
 			else:
-				line_transitions.append(PropertyTransition(line, 'midpoint', from_pixel-steps_if_subtracting, line_ease, line_ease_duration))
-		if line.color != self.player_fg_color:
-			line_transitions.append(ColorTransitionFunction(line.color, self.player_fg_color, line_ease(duration=line_ease_duration)))
+				trannies.append(PropertyTransition(line, 'midpoint', from_pixel-steps_if_subtracting, line_ease, line_ease_duration))
+		if line.color != active_player.color.highlight:
+			trannies.append(ColorTransitionFunction(line.color, active_player.color.highlight, line_ease(duration=line_ease_duration)))
 		if line.length != player_line_length:
-			line_transitions.append(PropertyTransition(line, 'length', player_line_length, line_ease, line_ease_duration))
+			trannies.append(PropertyTransition(line, 'length', player_line_length, line_ease, line_ease_duration))
+
+		target_bg_brightness = LED_BRIGHTNESS_NORMAL if state.state == STATE_PLAYING else 0.0
+		target_dot_brightness = DOTS_BRIGHTNESS if state.state == STATE_PLAYING else 0
 
 		if from_pixel != to_pixel:
 			# We want to first fade out the current background color to black,
 			# Then move the player line to the new position, changing its color while doing so,
 			# and finally fade in the background to the new color.
-			trans_fade_out = ParallellTransitionFunctions(
-				PropertyTransition(self, 'bg_brightness', 0.0, FADE_EASE, FADE_DURATION),
-				PropertyTransition(self, 'dot_brightness', 0.0, FADE_EASE, FADE_DURATION),
-			)
 			self.seat_line.transitions = [
-				trans_fade_out,
-				ParallellTransitionFunctions(*line_transitions),
-			]
-			if state.state_type != 'et':
-				trans_fade_in = ParallellTransitionFunctions(
-					PropertyTransition(self, 'bg_brightness', LED_BRIGHTNESS_NORMAL, FADE_EASE, FADE_DURATION),
-					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
+				ParallellTransitionFunctions(
+					PropertyTransition(self, 'bg_brightness', 0.0, FADE_EASE, FADE_DURATION),
+					PropertyTransition(self, 'dot_brightness', 0.0, FADE_EASE, FADE_DURATION),
+				),
+				ParallellTransitionFunctions(*trannies),
+				ParallellTransitionFunctions(
+					PropertyTransition(self, 'bg_brightness', target_bg_brightness, FADE_EASE, FADE_DURATION),
+					PropertyTransition(self, 'dot_brightness', target_dot_brightness, FADE_EASE, FADE_DURATION),
 				)
-				self.seat_line.transitions.append(trans_fade_in)
+			]
 		else:
-			self.seat_line.transitions = []
-			if len(line_transitions) > 0:
-				self.seat_line.transitions.append(ParallellTransitionFunctions(*line_transitions))
-			if self.seat_line.line.color != self.player_bg_color:
-				self.seat_line.transitions.append(ParallellTransitionFunctions(
-					ColorTransitionFunction(self.seat_line.line.color, self.player_bg_color, easing=FADE_EASE(0, 1, FADE_DURATION)),
-					PropertyTransition(self, 'dot_brightness', DOTS_BRIGHTNESS, FADE_EASE, FADE_DURATION),
-				))
+			if self.bg_brightness != target_bg_brightness:
+				trannies.append(PropertyTransition(self, 'bg_brightness', target_bg_brightness, FADE_EASE, FADE_DURATION))
+			if self.dot_brightness != target_dot_brightness:
+				trannies.append(PropertyTransition(self, 'dot_brightness', target_dot_brightness, FADE_EASE, FADE_DURATION))
+			if len(trannies) > 0:
+				self.seat_line.transitions = [ParallellTransitionFunctions(*trannies)]
 
 	def on_time_reminder(self, time_reminder_count: int):
 		self.blinks_left = min(time_reminder_count, TIME_REMINDER_MAX_PULSES)
