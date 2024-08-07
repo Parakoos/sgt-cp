@@ -26,6 +26,7 @@ from game_state import GameState
 import json
 
 class SgtConnectionMQTT(SgtConnection):
+	command_to_send: list[tuple[str, int|None, list[int]|None]]
 	def __init__(self, view: View):
 		super().__init__(view)
 		self.mqtt_topic_game = f"{SGT_USER_ID}/game"
@@ -51,7 +52,7 @@ class SgtConnectionMQTT(SgtConnection):
 		self.mqtt_client.on_message = self._on_message
 		self.mqtt_client.on_subscribe = self._on_subscribe
 		self.mqtt_client.enable_logger(logging, log_level=20, logger_name="mqtt")
-		self.command_to_send = None
+		self.command_to_send = []
 		self.latest_message = None
 
 	def is_connected(self):
@@ -83,14 +84,13 @@ class SgtConnectionMQTT(SgtConnection):
 
 	def _enqueue_command(self, value: str, seat: int|None = None, seats: list[int]|None = None):
 		if value != None:
-			self.command_to_send = (value, seat, seats)
+			self.command_to_send.append((value, seat, seats))
 
 	def send_command(self) -> bool:
-		if self.command_to_send == None:
+		if len(self.command_to_send) == 0 or (self.view.state and self.view.state.ts_command_sent_based_on_this != None):
 			return False
 		else:
-			self._send(*self.command_to_send)
-			self.command_to_send = None
+			self._send(*self.command_to_send.pop(0))
 			return True
 
 	def _send(self, value: str, seat: int|None = None, seats: list[int]|None = None):
@@ -112,6 +112,7 @@ class SgtConnectionMQTT(SgtConnection):
 		action = json.dumps(action_map)
 		log.debug('MQTT Publish to %s value %s', self.mqtt_topic_command, action)
 		self.mqtt_client.publish(self.mqtt_topic_command, action)
+		self.view.state.ts_command_sent_based_on_this = time.monotonic()
 
 	def poll_for_new_messages(self):
 		if not self.mqtt_client.is_connected():
@@ -119,6 +120,9 @@ class SgtConnectionMQTT(SgtConnection):
 		start_ts = time.monotonic()
 		self.mqtt_client.loop(0)
 		self.view.record_polling_delay(time.monotonic() - start_ts)
+		if self.view.state != None and self.view.state.ts_command_sent_based_on_this != None:
+			if time.monotonic() - self.view.state.ts_command_sent_based_on_this > 3:
+				self.view.state.ts_command_sent_based_on_this = None
 
 	def handle_new_messages(self) -> None:
 		if self.latest_message == None:

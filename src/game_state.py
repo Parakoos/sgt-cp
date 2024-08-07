@@ -243,6 +243,8 @@ class GameState():
 		self.current_times = None
 		color_cache_old = color_cache_new
 
+		self.ts_command_sent_based_on_this = None
+
 	def has_action(self, action):
 		return self.action_admin == action or self.action_pause == action or self.action_primary == action or self.action_secondary == action
 
