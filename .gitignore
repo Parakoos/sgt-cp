@@ -8,4 +8,4 @@ boot_out.txt
 sd
 settings.toml
 code.py
-mpy-cross.exe
+mpy-cross*.exe

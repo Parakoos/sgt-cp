@@ -126,3 +126,9 @@ class SgtConnection:
 			return 'StartSimTurn'
 		else:
 			return None
+
+	def enqueue_send_new_turn_order(self, turn_order_seats: list[int]):
+		if self.view.state != None and self.view.state.allow_reorder():
+			return "Reorder"
+		else:
+			return None

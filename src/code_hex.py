@@ -3,6 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
+from reorder import Reorder
 
 # =================== Settings =================== #
 PIXELS_PIN = board.IO43			# Pin of the neopixel strip
@@ -61,12 +62,20 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 	if sim_turn_selection_in_progress:
 		# Stop reaction to buttons while the sim turn selection is in progress.
 		return
+	if view.reorder is not None:
+		# Stop reaction to buttons while the reorder is in progress.
+		return
 	def on_success():
 		arcade_leds[BUTTON_PINS.index(btn_pin)].value = False
 
 	if long_press:
 		if presses == 1:
-			sgt_connection.enqueue_send_toggle_admin(on_success=on_success)
+			if (view.state.allow_reorder()):
+				log.info(f"Reordering in progress. Stop listening to normal button presses.")
+				seat = BUTTON_PINS.index(btn_pin) + 1
+				view.reorder = Reorder(initiating_seat=seat)
+			else:
+				sgt_connection.enqueue_send_toggle_admin(on_success=on_success)
 		elif presses == 2:
 			if view.state.allow_sim_turn_start():
 				seat = BUTTON_PINS.index(btn_pin) + 1
@@ -84,10 +93,21 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			sgt_connection.enqueue_send_toggle_pause(on_success=on_success)
 def pressed_keys_update_callback(pressed_keys: set[Pin]):
 	global sim_turn_selection_in_progress
-	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
-	if len(pressed_keys) == 0:
-		# We know the sim turn selection is over once all buttons have been released
-		sim_turn_selection_in_progress = False
+	if view.state is None:
+		return
+	elif view.reorder is not None:
+		if len(pressed_keys) == 0:
+			log.info(f"Reordering stopped")
+			view.reorder = None
+		else:
+			pressed_seats = set(map(lambda x: BUTTON_PINS.index(x) + 1, pressed_keys))
+			log.info(f"Pressed Seats: {pressed_seats}")
+			view.reorder.handle_activated_seats(pressed_seats)
+	else:
+		viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
+		if len(pressed_keys) == 0:
+			# We know the sim turn selection is over once all buttons have been released
+			sim_turn_selection_in_progress = False
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress

@@ -3,6 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
+from reorder import Reorder
 
 # =================== Settings =================== #
 BUTTON_PINS = [board.BUTTON, board.D1, board.D2]
@@ -29,9 +30,17 @@ button_pin_to_val_when_pressed = {
 buttons = Buttons(button_pin_to_val_when_pressed)
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 	log.info('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
-	if long_press:
+	if view.reorder is not None:
+		log.info('Buttons presses disabled during reorder')
+	elif long_press:
 		if presses == 1:
-			sgt_connection.enqueue_send_toggle_admin()
+			log.info(f"Long Press: State={view.state.state}, StateType={view.state.state_type}")
+			if (view.state.allow_reorder()):
+				log.info(f"Reordering in progress. Stop listening to normal button presses.")
+				seat = BUTTON_PINS.index(btn_pin) + 1
+				view.reorder = Reorder(initiating_seat=seat)
+			else:
+				sgt_connection.enqueue_send_toggle_admin()
 		elif presses == 2:
 			# sgt_connection.enqueue_send_toggle_pause()
 			sgt_connection.enqueue_send_start_sim_turn(set([1,2]))
@@ -47,8 +56,19 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			sgt_connection.enqueue_send_secondary(seat=seat)
 
 def pressed_keys_update_callback(pressed_keys: set[Pin]):
-	if len(pressed_keys) == len(view.state.players):
-		sgt_connection.enqueue_send_start_game(2)
+	if view.state is None:
+		return
+	log.info(f"Pressed keys: {pressed_keys}: State={view.state.state}, StateType={view.state.state_type}")
+	if view.reorder is not None:
+		if len(pressed_keys) == 0:
+			log.info(f"Reordering stopped")
+			view.reorder = None
+		else:
+			pressed_seats = set(map(lambda x: BUTTON_PINS.index(x) + 1, pressed_keys))
+			log.info(f"Pressed Seats: {pressed_seats}")
+			view.reorder.handle_activated_seats(pressed_seats)
+	# if len(pressed_keys) == len(view.state.players):
+	# 	sgt_connection.enqueue_send_start_game(2)
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress

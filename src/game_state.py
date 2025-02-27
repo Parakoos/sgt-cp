@@ -250,7 +250,8 @@ class GameState():
 
 	def allow_sim_turn_start(self):
 		return self.state == STATE_PLAYING or (self.state == STATE_ADMIN and self.state_type != STATE_TYPE_MID_TURN and self.state_type != STATE_TYPE_MID_SIM_TURN)
-
+	def allow_reorder(self):
+		return self.state == STATE_ADMIN and self.state_type == STATE_TYPE_END_OF_ROUND
 	def get_active_player(self) -> Player | None:
 		if len(self.seat) == 1:
 			return find_thing((p for p in self.players if p.seat == self.seat[0]), None)

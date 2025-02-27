@@ -9,6 +9,8 @@ MQTT_HOST = get_string('MQTT_HOST')
 MQTT_PORT = get_int('MQTT_PORT')
 MQTT_USERNAME = get_string('MQTT_USERNAME')
 MQTT_PASSWORD = get_string('MQTT_PASSWORD')
+MQTT_SOCKET_TIMEOUT = get_float('MQTT_SOCKET_TIMEOUT', 0)
+
 # Optional time offset in seconds to improve syncing between SGT and the MCU
 MQTT_MANUAL_TIME_OFFSET = get_int('MQTT_MANUAL_TIME_OFFSET', 0)
 
@@ -45,7 +47,7 @@ class SgtConnectionMQTT(SgtConnection):
 			socket_pool=pool,
 			ssl_context=ssl_context,
 			is_ssl=True,
-			socket_timeout=0,
+			socket_timeout=MQTT_SOCKET_TIMEOUT,
 		)
 		self.mqtt_client.on_connect = self._on_connected
 		self.mqtt_client.on_disconnect = self._on_disconnected
@@ -118,7 +120,7 @@ class SgtConnectionMQTT(SgtConnection):
 		if not self.mqtt_client.is_connected():
 			self.connect()
 		start_ts = time.monotonic()
-		self.mqtt_client.loop(0)
+		self.mqtt_client.loop(MQTT_SOCKET_TIMEOUT)
 		self.view.record_polling_delay(time.monotonic() - start_ts)
 		if self.view.state != None and self.view.state.ts_command_sent_based_on_this != None:
 			if time.monotonic() - self.view.state.ts_command_sent_based_on_this > 3:
@@ -138,7 +140,8 @@ class SgtConnectionMQTT(SgtConnection):
 			return
 		log.info(' ============================= LOOK UP UNIX TIME ==========================================')
 		self.view.set_connection_progress_text('Getting current time')
-		with self.session.get('http://worldtimeapi.org/api/timezone/Etc/UTC') as response:
+		unix_time_url = "https://parakoos.com/time.php"
+		with self.session.get(unix_time_url) as response:
 			now = round(time.monotonic())
 			json = response.json()
 			time_unix_sec = json['unixtime']
@@ -170,6 +173,13 @@ class SgtConnectionMQTT(SgtConnection):
 		command = super().enqueue_send_start_sim_turn(seats)
 		if command != None:
 			self._enqueue_command(command, seats=list(seats))
+			return True
+		else:
+			return False
+	def enqueue_send_new_turn_order(self, turn_order_seats: list[int]):
+		command = super().enqueue_send_new_turn_order(turn_order_seats)
+		if command != None:
+			self._enqueue_command(command, seats=turn_order_seats)
 			return True
 		else:
 			return False

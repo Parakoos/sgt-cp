@@ -1,17 +1,19 @@
 import adafruit_logging as logging
 log = logging.getLogger()
 from game_state import GameState, STATE_PLAYING, STATE_ADMIN, STATE_PAUSE, STATE_START, STATE_FINISHED, STATE_NOT_CONNECTED, STATE_RUNNING, STATE_NOT_RUNNING, STATE_SIM_TURN, CurrentTimes
+from reorder import Reorder
 from time import monotonic
-
 
 class View():
 	current_times: CurrentTimes
+	reorder: Reorder | None
 	def __init__(self):
 		self.state = None
 		self.polling_delays = []
 		self.current_times = None
 		self.time_reminder_check_timeout = 0
 		self.enable_time_reminder_check = True
+		self.reorder = None
 
 	def animate(self) -> bool:
 		"Return true of the animation is busy. Returns false if the animation is static."
