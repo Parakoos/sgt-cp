@@ -16,6 +16,7 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 		self.blink_transition = None
 		self.current_times = None
 		self.state = None
+		self.first_player_init_ts = None
 
 	def animate(self):
 		if self.blink_transition == None and self.blinks_left > 0:

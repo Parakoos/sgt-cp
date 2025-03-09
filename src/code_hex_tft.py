@@ -25,6 +25,7 @@ view.set_state(None)
 # ---------- WIFI -------------#
 from sgt_connection_mqtt import SgtConnectionMQTT
 sgt_connection = SgtConnectionMQTT(view)
+viewTableOutline.set_connection(sgt_connection)
 
 # ---------- BUTTONS SETUP -------------#
 from buttons import Buttons
@@ -35,7 +36,12 @@ button_pin_to_val_when_pressed = {
 	board.D2: True,
 }
 buttons = Buttons(button_pin_to_val_when_pressed)
+sim_turn_selection_in_progress = False
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+	global sim_turn_selection_in_progress
+	if sim_turn_selection_in_progress:
+		# Stop reaction to buttons while the sim turn selection is in progress.
+		return
 	log.info('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
 	if reorder.singleton is not None:
 		log.info('Buttons presses disabled during reorder')
@@ -46,6 +52,12 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 				log.info(f"Reordering in progress. Stop listening to normal button presses.")
 				seat = BUTTON_PINS.index(btn_pin) + 1
 				reorder.singleton = reorder.Reorder(initiating_seat=seat)
+			elif presses == 2:
+				if view.state.allow_sim_turn_start():
+					seat = BUTTON_PINS.index(btn_pin) + 1
+					viewTableOutline.begin_sim_turn_selection(seat)
+					sim_turn_selection_in_progress = True
+				# sgt_connection.enqueue_send_toggle_pause(on_success=on_success, on_failure=tone.error)
 			else:
 				sgt_connection.enqueue_send_toggle_admin()
 		elif presses == 2:
@@ -63,6 +75,12 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			sgt_connection.enqueue_send_secondary(seat=seat)
 
 def pressed_keys_update_callback(pressed_keys: set[Pin]):
+	global sim_turn_selection_in_progress
+	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
+	if len(pressed_keys) == 0:
+		# We know the sim turn selection is over once all buttons have been released
+		sim_turn_selection_in_progress = False
+
 	if view.state is None:
 		return
 	log.info(f"Pressed keys: {pressed_keys}: State={view.state.state}, StateType={view.state.state_type}")
@@ -74,8 +92,11 @@ def pressed_keys_update_callback(pressed_keys: set[Pin]):
 			pressed_seats = set(map(lambda x: BUTTON_PINS.index(x) + 1, pressed_keys))
 			log.info(f"Pressed Seats: {pressed_seats}")
 			reorder.singleton.handle_activated_seats(pressed_seats)
-	# if len(pressed_keys) == len(view.state.players):
-	# 	sgt_connection.enqueue_send_start_game(2)
+	else:
+		viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
+		if len(pressed_keys) == 0:
+			# We know the sim turn selection is over once all buttons have been released
+			sim_turn_selection_in_progress = False
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress
