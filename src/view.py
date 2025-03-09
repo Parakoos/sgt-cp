@@ -85,7 +85,7 @@ class View():
 		"Sub-classes should implement this to handle triggered time reminders"
 		pass
 
-	def set_state(self, state: GameState | None):
+	def set_state(self, state: GameState | None, force=False):
 		old_state = self.state
 		self.state = state
 		self.time_reminder_check_timeout = 0
@@ -93,7 +93,7 @@ class View():
 		if self.state == None:
 			log.debug('No state in view.set_state. Go to no game')
 			self.switch_to_no_game()
-		elif old_state == None or self.state.state != old_state.state:
+		elif old_state == None or self.state.state != old_state.state or force:
 			if state.state == STATE_PLAYING:
 				self.switch_to_playing(state, old_state)
 			elif state.state == STATE_SIM_TURN:

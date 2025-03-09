@@ -199,3 +199,26 @@ class RampUpDownTransitionFunction():
 			self.prev_loop_t = t
 
 		return False
+
+class BoomerangEase():
+	ease: EasingBase
+	def __init__(self, start_position: float, mid_position: float, ease: EasingBase, duration: float) -> None:
+		self.ease = ease(start_position, mid_position, duration/2)
+		self.duration = duration
+
+	def func(self, time:float):
+		if time <= self.duration/2:
+			# For example, duration=200, time=25, then we are 25/100=25% into the ease function.
+			return self.ease(time)
+		elif time > self.duration:
+			# We've overshot. Return the start value.
+			return self.ease.start
+		else:
+			# For example, duration=200, time=125, then we are 25/100=25% into the "return" ease function, meaning
+			# we are 75% into the ease function.
+			# duration=200, time=100, ease=100
+			# duration=200, time=125, ease=75
+			# duration=200, time=150, ease=50
+			# duration=200, time=175, ease=50
+			# duration=200, time=200, ease=0
+			return self.ease(self.duration - time)

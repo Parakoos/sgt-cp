@@ -3,16 +3,23 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
-from reorder import Reorder
+import reorder
 
 # =================== Settings =================== #
+SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
 BUTTON_PINS = [board.BUTTON, board.D1, board.D2]
 # =============== End of Settings ================ #
 
 # ---------- VIEW SETUP -------------#
 from view_multi import ViewMulti
 from view_console import ViewConsole
-view = ViewMulti([ViewConsole()])
+from view_table_outline import ViewTableOutline
+
+from adafruit_dotstar import DotStar
+dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
+viewTableOutline = ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS)
+
+view = ViewMulti([ViewConsole(), viewTableOutline])
 view.set_state(None)
 
 # ---------- WIFI -------------#
@@ -30,7 +37,7 @@ button_pin_to_val_when_pressed = {
 buttons = Buttons(button_pin_to_val_when_pressed)
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 	log.info('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
-	if view.reorder is not None:
+	if reorder.singleton is not None:
 		log.info('Buttons presses disabled during reorder')
 	elif long_press:
 		if presses == 1:
@@ -38,7 +45,7 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			if (view.state.allow_reorder()):
 				log.info(f"Reordering in progress. Stop listening to normal button presses.")
 				seat = BUTTON_PINS.index(btn_pin) + 1
-				view.reorder = Reorder(initiating_seat=seat)
+				reorder.singleton = reorder.Reorder(initiating_seat=seat)
 			else:
 				sgt_connection.enqueue_send_toggle_admin()
 		elif presses == 2:
@@ -59,14 +66,14 @@ def pressed_keys_update_callback(pressed_keys: set[Pin]):
 	if view.state is None:
 		return
 	log.info(f"Pressed keys: {pressed_keys}: State={view.state.state}, StateType={view.state.state_type}")
-	if view.reorder is not None:
+	if reorder.singleton is not None:
 		if len(pressed_keys) == 0:
 			log.info(f"Reordering stopped")
-			view.reorder = None
+			reorder.singleton = None
 		else:
 			pressed_seats = set(map(lambda x: BUTTON_PINS.index(x) + 1, pressed_keys))
 			log.info(f"Pressed Seats: {pressed_seats}")
-			view.reorder.handle_activated_seats(pressed_seats)
+			reorder.singleton.handle_activated_seats(pressed_seats)
 	# if len(pressed_keys) == len(view.state.players):
 	# 	sgt_connection.enqueue_send_start_game(2)
 

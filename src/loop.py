@@ -8,6 +8,7 @@ from microcontroller import Pin
 from gc import collect
 from time import monotonic
 from utils.settings import get_float
+import reorder
 
 # The speed of the animation, in Pixels/Seconds
 REORDER_COMMAND_DELAY = get_float('TABLE_REORDER_COMMAND_DELAY', 2.0)
@@ -37,12 +38,12 @@ def main_loop(
 				for loop in loops:
 					loop()
 				# Check if reordering is done
-				if view.reorder is not None and not view.reorder.is_done:
-					have_complete_seat_order = view.state is not None and len(view.reorder.new_seat_order) == len(view.state.players)
-					have_stayed_constant_long_enough = monotonic() - view.reorder.ts_last_change >= REORDER_COMMAND_DELAY
+				if reorder.singleton is not None and not reorder.singleton.is_done:
+					have_complete_seat_order = view.state is not None and len(reorder.singleton.new_seat_order) == len(view.state.players)
+					have_stayed_constant_long_enough = monotonic() - reorder.singleton.ts_last_change >= REORDER_COMMAND_DELAY
 					if have_complete_seat_order and have_stayed_constant_long_enough:
-						connection.enqueue_send_new_turn_order(view.reorder.new_seat_order)
-						view.reorder.is_done = True
+						connection.enqueue_send_new_turn_order(reorder.singleton.new_seat_order)
+						reorder.singleton.is_done = True
 				connection.send_command()
 				connection.poll_for_new_messages()
 				if connection.handle_new_messages():

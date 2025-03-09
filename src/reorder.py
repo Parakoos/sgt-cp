@@ -20,3 +20,5 @@ class Reorder():
 			self.new_seat_order.append(added_seat)
 		log.debug(f"Reorder: Removed={removed_seats}, Added: {added_seats}, New Order: {self.new_seat_order} @ {self.ts_last_change}")
 		self.ts_last_change = monotonic()
+
+singleton: Reorder | None = None

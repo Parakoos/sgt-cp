@@ -19,6 +19,7 @@ from utils.color import BLUE as BLUE_PC, RED as RED_PC, BLACK as BLACK_PC
 from utils.transition import SerialTransitionFunctions, PropertyTransition
 import adafruit_logging as logging
 from gc import collect, mem_free
+import reorder
 log = logging.getLogger()
 
 BLACK = BLACK_PC.black
@@ -45,6 +46,11 @@ class ViewTableOutline(View):
 		self.sgt_connection = connection
 	def animate(self) -> bool:
 		shared_stuff_busy = super().animate()
+		from seated_animation.seated_reorder import SgtSeatedReorder
+		if reorder.singleton is not None and not isinstance(self.animation, SgtSeatedReorder):
+			self.fade_to_new_animation(SgtSeatedReorder(self))
+		elif reorder.singleton is None and isinstance(self.animation, SgtSeatedReorder):
+			self.set_state(self.state, True)
 		if self.fade_to_black_tranny != None:
 			if self.fade_to_black_tranny.loop():
 				self.fade_to_black_tranny = None

@@ -3,7 +3,7 @@ log = logging.getLogger()
 log.setLevel(10)
 import board
 from game_state import GameState
-from reorder import Reorder
+import reorder
 
 # =================== Settings =================== #
 PIXELS_PIN = board.IO43			# Pin of the neopixel strip
@@ -62,7 +62,7 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 	if sim_turn_selection_in_progress:
 		# Stop reaction to buttons while the sim turn selection is in progress.
 		return
-	if view.reorder is not None:
+	if reorder.singleton is not None:
 		# Stop reaction to buttons while the reorder is in progress.
 		return
 	def on_success():
@@ -73,7 +73,7 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 			if (view.state.allow_reorder()):
 				log.info(f"Reordering in progress. Stop listening to normal button presses.")
 				seat = BUTTON_PINS.index(btn_pin) + 1
-				view.reorder = Reorder(initiating_seat=seat)
+				reorder.singleton = reorder.Reorder(initiating_seat=seat)
 			else:
 				sgt_connection.enqueue_send_toggle_admin(on_success=on_success)
 		elif presses == 2:
@@ -95,14 +95,14 @@ def pressed_keys_update_callback(pressed_keys: set[Pin]):
 	global sim_turn_selection_in_progress
 	if view.state is None:
 		return
-	elif view.reorder is not None:
+	elif reorder.singleton is not None:
 		if len(pressed_keys) == 0:
 			log.info(f"Reordering stopped")
-			view.reorder = None
+			reorder.singleton = None
 		else:
 			pressed_seats = set(map(lambda x: BUTTON_PINS.index(x) + 1, pressed_keys))
 			log.info(f"Pressed Seats: {pressed_seats}")
-			view.reorder.handle_activated_seats(pressed_seats)
+			reorder.singleton.handle_activated_seats(pressed_seats)
 	else:
 		viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
 		if len(pressed_keys) == 0:
