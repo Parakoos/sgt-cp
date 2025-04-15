@@ -25,7 +25,7 @@ class SgtErrorAnimation(SgtSeatedAnimation):
 		self.seat_lines = []
 		self.seat_line_max_lengths = []
 		seat_count = len(self.parent.seat_definitions)
-		self.bg_color = BLACK.copy()
+		self.bg_color = BLACK.create_display_color()
 		self.overall_transition = SerialTransitionFunctions([])
 		for i in range(seat_count):
 			s1 = self.parent.seat_definitions[i]

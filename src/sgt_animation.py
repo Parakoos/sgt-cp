@@ -1,20 +1,24 @@
 import time
 from adafruit_led_animation.animation import Animation
 from easing import EasingBase
-from utils.color import DisplayedColor
+from utils.color import DisplayedColor, StaticColor
 from utils.transition import ColorTransitionFunction
 from adafruit_pixelbuf import PixelBuf
 import adafruit_logging as logging
 log = logging.getLogger()
 
 class SgtAnimation():
-	def __init__(self, color: DisplayedColor, *members: tuple[Animation, float|int|None, bool]) -> None:
+	def __init__(self, color: DisplayedColor|StaticColor, *members: tuple[Animation, float|int|None, bool]) -> None:
 		self.members = members
 		self.current_index = -1
 		self.animation_start_ts = 0
 		self.timed_by_cycles = False
-		self.color=color.current_color
-		self.displayed_color = color
+		if isinstance(color, DisplayedColor):
+			self.displayed_color = color
+		elif isinstance(color, StaticColor):
+			self.displayed_color = color.create_display_color()
+		else:
+			raise TypeError(f"Expected Color, got {type(color)}")
 		self.transition = None
 		self.next()
 
@@ -34,7 +38,7 @@ class SgtAnimation():
 		if self.transition:
 			if self.transition.loop():
 				self.transition = None
-			self.set_color(self.displayed_color.current_color)
+			self.set_color(self.displayed_color)
 
 		animation.animate(show)
 		if animation_timing == None:
@@ -48,12 +52,12 @@ class SgtAnimation():
 				self.next()
 		return not(self.transition == None and self.members[self.current_index][2])
 
-	def set_color(self, color: DisplayedColor, transition: EasingBase|None = None):
+	def set_color(self, new_display_color: DisplayedColor, transition: EasingBase|None = None):
 		if transition:
-			self.transition = ColorTransitionFunction[self.displayed_color, color, transition]
+			self.transition = ColorTransitionFunction[self.displayed_color, new_display_color, transition]
 		else:
-			self.color = color
-			self.members[self.current_index][0].color = color
+			self.displayed_color = new_display_color
+			self.members[self.current_index][0].color = self.displayed_color.current_color
 
 class SgtAnimationGroup():
 	def __init__(self, animations: list[SgtAnimation], parent_pixel_obj: PixelBuf) -> None:

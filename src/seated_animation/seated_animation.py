@@ -18,7 +18,7 @@ SPARKLE_DURATION_MAX = get_float('TABLE_SPARKLE_DURATION_MAX', 0.5)
 from game_state import GameState
 from adafruit_pixelbuf import PixelBuf
 from view_table_outline import ViewTableOutline
-from utils.color import DisplayedColor
+from utils.color import DisplayedColor, StaticColor
 from utils.transition import TransitionFunction, SerialTransitionFunctions, PropertyTransition
 from random import uniform, choice
 import adafruit_fancyled.adafruit_fancyled as fancy
@@ -28,10 +28,15 @@ log = logging.getLogger()
 
 class Line():
 	sparkles: list[tuple[int, SerialTransitionFunctions]]
-	def __init__(self, midpoint: float, length: float, color: DisplayedColor) -> None:
+	def __init__(self, midpoint: float, length: float, color: DisplayedColor|StaticColor) -> None:
 		self.midpoint = midpoint
 		self.length = length
-		self.color = color
+		if isinstance(color, DisplayedColor):
+			self.color = color
+		elif isinstance(color, StaticColor):
+			self.color = color.create_display_color()
+		else:
+			raise TypeError(f"Expected Color, got {type(self.color)}")
 		self.sparkle = False
 		self.sparkles = list()
 	def draw(self, pixels: list[int]):

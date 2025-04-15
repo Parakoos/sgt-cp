@@ -13,7 +13,7 @@ class SgtSeatedSimTurnSelection(SgtSeatedAnimation):
 			seat = seat_0+1
 			player = self.parent.state.get_player_by_seat(seat)
 			if player == None:
-				line = Line(midpoint=s[0], length=0, color=BLACK.copy())
+				line = Line(midpoint=s[0], length=0, color=BLACK)
 			elif seat == initiator_seat:
 				line = Line(midpoint=s[0], length=s[1], color=player.color.dim)
 				line.sparkle = True

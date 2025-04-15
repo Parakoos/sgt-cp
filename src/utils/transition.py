@@ -2,7 +2,7 @@ import adafruit_logging as logging
 log = logging.getLogger()
 from time import monotonic
 from easing import EasingBase
-from utils.color import DisplayedColor, BLACK
+from utils.color import DisplayedColor, BLACK, StaticColor
 from ulab.numpy import trapz
 import adafruit_fancyled.adafruit_fancyled as fancy
 
@@ -78,12 +78,14 @@ class PropertyTransition(TransitionFunction):
 		return done
 
 class ColorTransitionFunction(TransitionFunction):
-	def __init__(self, from_color: DisplayedColor, to_color: DisplayedColor, easing: EasingBase) -> None:
+	def __init__(self, from_color: DisplayedColor, to_color: StaticColor, easing: EasingBase) -> None:
 		super().__init__(easing)
 		self.start_time = None
 		self.easing = easing
 		self.target_color = to_color if to_color != None else BLACK.black
 		self.color_to_update = from_color
+		if (not isinstance(self.color_to_update, DisplayedColor)):
+			raise Exception('color_to_update must be a DisplayedColor!')
 
 	def loop(self):
 		if self.target_color == self.color_to_update:

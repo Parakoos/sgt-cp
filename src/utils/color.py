@@ -40,32 +40,23 @@ class PlayerColor():
 				self.fancy.saturation = find_step(HSV_SATURATION_STEPS, self.fancy.saturation)
 			if _HSV_VALUE_STEPS != '':
 				self.fancy.value = find_step(HSV_VALUE_STEPS, self.fancy.value)
-		self.black = DisplayedColor(self.fancy, 0.0)
-		self.base = DisplayedColor(self.fancy, 1.0)
-		self.dim = DisplayedColor(self.fancy, LED_BRIGHTNESS_NORMAL)
-		self.highlight = DisplayedColor(self.fancy, LED_BRIGHTNESS_HIGHLIGHT)
+		self.black = StaticColor(self.fancy, 0.0)
+		self.base = StaticColor(self.fancy, 1.0)
+		self.dim = StaticColor(self.fancy, LED_BRIGHTNESS_NORMAL)
+		self.highlight = StaticColor(self.fancy, LED_BRIGHTNESS_HIGHLIGHT)
 
 	def __repr__(self):
 		return  f'{self.fancy}'
 
-class DisplayedColor():
+class StaticColor():
 	fancy_color: fancy.CRGB|fancy.CHSV
 	brightness: float
-	current_color: int
+
 	def __init__(self, fancy_color: fancy.CRGB|fancy.CHSV, brightness: float) -> None:
-		self.fancy_color = None
-		self.brightness = None
-		self.update(fancy_color, brightness)
-
-	def update(self, fancy_color: fancy.CRGB|fancy.CHSV, brightness: float):
-		rounded_brightness = round(brightness, 2)
-		if self.fancy_color == fancy_color and self.brightness == rounded_brightness:
-			return
-		self.current_color = fancy.gamma_adjust(fancy_color, brightness=rounded_brightness).pack()
 		self.fancy_color = fancy_color
-		self.brightness = rounded_brightness
+		self.brightness = brightness
 
-	def copy(self):
+	def create_display_color(self):
 		return DisplayedColor(self.fancy_color, self.brightness)
 
 	def is_black(self):
@@ -77,15 +68,36 @@ class DisplayedColor():
 			return self.fancy_color.value == 0.0
 
 	def __eq__(self, value: object) -> bool:
-		if isinstance(value, DisplayedColor):
-			if self.brightness != value.brightness:
-				return False
-			elif self.is_black() and value.is_black():
+		if isinstance(value, StaticColor):
+			if self.is_black() and value.is_black():
 				return True
+			elif self.brightness != value.brightness:
+				return False
 			else:
 				return equally_fancy(self.fancy_color, value.fancy_color)
 		else:
 			return False
+
+	def __repr__(self):
+		return  f'{self.fancy_color} @ {self.brightness}'
+
+class DisplayedColor(StaticColor):
+	current_color: int
+
+	def __init__(self, fancy_color: fancy.CRGB|fancy.CHSV, brightness: float) -> None:
+		# Must set the variables below to None so the update method is forced to calculate
+		# the current_color
+		self.fancy_color = None
+		self.brightness = None
+		self.update(fancy_color, brightness)
+
+	def update(self, fancy_color: fancy.CRGB|fancy.CHSV, brightness: float):
+		rounded_brightness = round(brightness, 2)
+		if self.fancy_color == fancy_color and self.brightness == rounded_brightness:
+			return
+		self.current_color = fancy.gamma_adjust(fancy_color, brightness=rounded_brightness).pack()
+		self.fancy_color = fancy_color
+		self.brightness = rounded_brightness
 
 	def __repr__(self):
 		return  f'{hex(self.current_color)}'

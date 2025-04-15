@@ -11,7 +11,7 @@ log = logging.getLogger()
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 	def __init__(self, parent_view: ViewTableOutline):
 		super().__init__(parent_view)
-		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK.copy()), transitions=[]) for s in self.seat_definitions)
+		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK), transitions=[]) for s in self.seat_definitions)
 		self.blinks_left = 0
 		self.blink_transition = None
 		self.current_times = None
@@ -67,9 +67,9 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 			else:
 				new_color = player.color.dim
 
-			if seat_color == BLACK and new_color != None:
+			if seat_color == BLACK and new_color != None and seat_color != new_color:
 				seat_line.length = 0
-				seat_line.color = new_color
+				seat_line.color = new_color.create_display_color()
 				self.seat_lines[seat].transitions = [PropertyTransition(seat_line, 'length', new_line_length, FADE_EASE, FADE_DURATION)]
 			elif seat_color != BLACK and new_color == None:
 				self.seat_lines[seat].transitions = [PropertyTransition(seat_line, 'length', 0, FADE_EASE, FADE_DURATION)]

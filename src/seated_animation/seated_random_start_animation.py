@@ -34,9 +34,9 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 		rotations_to_spin = randint(START_GAME_SPIN_MIN_ROTATIONS, START_GAME_SPIN_MAX_ROTATIONS)
 		start_px = selected_player_midpoint + random() * self.length
 		end_px = selected_player_midpoint + rotations_to_spin * self.length
-		self.line = Line(midpoint=start_px, length=selected_seat_definition[1], color=BLACK.copy())
+		self.line = Line(midpoint=start_px, length=selected_seat_definition[1], color=BLACK)
 		self.spin_transition = RampUpDownTransitionFunction(START_GAME_SPIN_SPEED_PPS, start_px, end_px, START_GAME_SPIN_EASE_IN, START_GAME_SPIN_EASE_IN_DURATION, START_GAME_SPIN_EASE_OUT, START_GAME_SPIN_EASE_OUT_DURATION)
-		self.bg_color = BLACK.copy()
+		self.bg_color = BLACK.create_display_color()
 		self.color_transition_fg = None
 		self.color_transition_bg = None
 		self.end_ts = time.monotonic() + self.spin_transition.duration
@@ -50,8 +50,8 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 			pass
 		elif done:
 			self.line.sparkle = True
-			self.line.color = self.selected_player.color.highlight
-			self.bg_color = self.selected_player.color.dim
+			self.line.color = self.selected_player.color.highlight.create_display_color()
+			self.bg_color = self.selected_player.color.dim.create_display_color()
 			self.parent.sgt_connection.enqueue_send_start_game(self.selected_player.seat)
 			self.start_game_command_sent = True
 		else:

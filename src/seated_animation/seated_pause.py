@@ -31,8 +31,8 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 		active_player = state.get_active_player()
 		sd = self.parent.seat_definitions[active_player.seat-1] if active_player else self.parent.seat_definitions[0]
 		color = active_player.color if active_player else state.color
-		self.fg_color = color.highlight
-		self.bg_color = color.dim
+		self.fg_color = color.highlight.create_display_color()
+		self.bg_color = color.dim.create_display_color()
 		start_pixel = sd[0]
 		mid_pixel = start_pixel + len(self.parent.pixels)/2
 		line_1 = Line(midpoint=start_pixel, length=sd[1], color=self.fg_color)

@@ -26,7 +26,7 @@ class SgtSeatedReorder(SgtSeatedAnimation):
 			seat = seat_0+1
 			player = self.parent.state.get_player_by_seat(seat)
 			if player == None:
-				line = Line(midpoint=s[0], length=0, color=BLACK.copy())
+				line = Line(midpoint=s[0], length=0, color=BLACK)
 			else:
 				line = Line(midpoint=s[0], length=0, color=player.color.dim)
 			self.seat_lines.append(line)

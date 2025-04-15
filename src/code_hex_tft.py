@@ -16,7 +16,14 @@ from view_console import ViewConsole
 from view_table_outline import ViewTableOutline
 
 from adafruit_dotstar import DotStar
-dots = DotStar(board.SCL, board.SDA, 30, brightness=1, auto_write=False)
+
+# If I use the board with the broken display, I can use the SPI interface.
+import displayio
+displayio.release_displays()
+dots = DotStar(board.SCK, board.MOSI, 30, brightness=1, auto_write=False)
+# If using another tft board and I want to use the display, then the SPI is busy.
+# dots = DotStar(board.D?, board.D?, 30, brightness=1, auto_write=False)
+
 viewTableOutline = ViewTableOutline(dots, seat_definitions=SEAT_DEFINITIONS)
 
 view = ViewMulti([ViewConsole(), viewTableOutline])
@@ -31,7 +38,8 @@ viewTableOutline.set_connection(sgt_connection)
 from buttons import Buttons
 from microcontroller import Pin
 button_pin_to_val_when_pressed = {
-	board.BUTTON: False,
+	# board.BUTTON: False,
+	board.A1: True,
 	board.D1: True,
 	board.D2: True,
 }
