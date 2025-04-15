@@ -214,7 +214,7 @@ class GameState():
 		self.name = get_state_string(state, 'name', "(no name)")
 
 		# (not sand) The current or next-up player color
-		self.color = get_state_color(state, 'color', 'colorHsv')
+		self.color_p = get_state_color(state, 'color', 'colorHsv')
 
 		# Different actions. Either None or a string starting with 'game/{action}' that
 		# can be sent to the MQTT commands queue to issue commands
@@ -345,8 +345,8 @@ class GameState():
 			facts.append(f'time_reminders={self.time_reminders}')
 		if (self.name):
 			facts.append(f'name={self.name}')
-		if (self.color):
-			facts.append(f'color={self.color}')
+		if (self.color_p):
+			facts.append(f'color={self.color_p}')
 		if (self.seat):
 			facts.append(f'seat={self.seat}')
 		if (self.action_primary):
@@ -371,7 +371,7 @@ class GameState():
 		copy.player_time_sec = self.player_time_sec
 		copy.total_play_time_sec = self.total_play_time_sec
 		copy.name = self.name
-		copy.color = self.color
+		copy.color_p = self.color_p
 		copy.action_primary = self.action_primary
 		copy.action_secondary = self.action_secondary
 		copy.action_admin = self.action_admin

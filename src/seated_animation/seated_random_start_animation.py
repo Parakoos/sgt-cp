@@ -34,7 +34,7 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 		rotations_to_spin = randint(START_GAME_SPIN_MIN_ROTATIONS, START_GAME_SPIN_MAX_ROTATIONS)
 		start_px = selected_player_midpoint + random() * self.length
 		end_px = selected_player_midpoint + rotations_to_spin * self.length
-		self.line = Line(midpoint=start_px, length=selected_seat_definition[1], color=BLACK)
+		self.line = Line(midpoint=start_px, length=selected_seat_definition[1], color_ds=BLACK)
 		self.spin_transition = RampUpDownTransitionFunction(START_GAME_SPIN_SPEED_PPS, start_px, end_px, START_GAME_SPIN_EASE_IN, START_GAME_SPIN_EASE_IN_DURATION, START_GAME_SPIN_EASE_OUT, START_GAME_SPIN_EASE_OUT_DURATION)
 		self.bg_color = BLACK.create_display_color()
 		self.color_transition_fg = None
@@ -50,7 +50,7 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 			pass
 		elif done:
 			self.line.sparkle = True
-			self.line.color = self.selected_player.color.highlight.create_display_color()
+			self.line.color_d = self.selected_player.color.highlight.create_display_color()
 			self.bg_color = self.selected_player.color.dim.create_display_color()
 			self.parent.sgt_connection.enqueue_send_start_game(self.selected_player.seat)
 			self.start_game_command_sent = True
@@ -58,18 +58,16 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 			if self.color_transition_fg == None or self.color_transition_bg == None:
 				time_left = self.end_ts - time.monotonic()
 				if time_left < START_GAME_COLOR_DURATION*2:
-					color = self.selected_player.color
-					self.color_transition_fg = ColorTransitionFunction(self.line.color, color.highlight, START_GAME_COLOR_EASING(duration=time_left))
-					self.color_transition_bg = ColorTransitionFunction(self.bg_color, color.dim, START_GAME_COLOR_EASING(duration=time_left))
+					self.color_transition_fg = ColorTransitionFunction(self.line.color_d, self.selected_player.color.highlight, START_GAME_COLOR_EASING(duration=time_left))
+					self.color_transition_bg = ColorTransitionFunction(self.bg_color, self.selected_player.color.dim, START_GAME_COLOR_EASING(duration=time_left))
 				else:
 					options = []
 					for player in self.parent.state.players:
 						if player != self.random_player:
 							options.append(player)
 					self.random_player = choice(options)
-					random_color = self.random_player.color
-					self.color_transition_fg = ColorTransitionFunction(self.line.color, random_color.highlight, START_GAME_COLOR_EASING(duration=START_GAME_COLOR_DURATION))
-					self.color_transition_bg = ColorTransitionFunction(self.bg_color, random_color.dim, START_GAME_COLOR_EASING(duration=START_GAME_COLOR_DURATION))
+					self.color_transition_fg = ColorTransitionFunction(self.line.color_d, self.random_player.color.highlight, START_GAME_COLOR_EASING(duration=START_GAME_COLOR_DURATION))
+					self.color_transition_bg = ColorTransitionFunction(self.bg_color, self.random_player.color.dim, START_GAME_COLOR_EASING(duration=START_GAME_COLOR_DURATION))
 
 			if self.color_transition_fg.loop():
 				self.color_transition_fg = None

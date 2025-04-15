@@ -13,14 +13,14 @@ class SgtSeatedSimTurnSelection(SgtSeatedAnimation):
 			seat = seat_0+1
 			player = self.parent.state.get_player_by_seat(seat)
 			if player == None:
-				line = Line(midpoint=s[0], length=0, color=BLACK)
+				line = Line(midpoint=s[0], length=0, color_ds=BLACK)
 			elif seat == initiator_seat:
-				line = Line(midpoint=s[0], length=s[1], color=player.color.dim)
+				line = Line(midpoint=s[0], length=s[1], color_ds=player.color.dim)
 				line.sparkle = True
 			elif seat in self.parent.seats_with_pressed_keys:
-				line = Line(midpoint=s[0], length=s[1], color=player.color.dim)
+				line = Line(midpoint=s[0], length=s[1], color_ds=player.color.dim)
 			else:
-				line = Line(midpoint=s[0], length=0, color=player.color.dim)
+				line = Line(midpoint=s[0], length=0, color_ds=player.color.dim)
 			self.seat_lines.append(LineTransition(line, []))
 		self.initiator_seat = initiator_seat
 		self.selection_completed = False

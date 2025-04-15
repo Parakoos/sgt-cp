@@ -104,7 +104,7 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				self.seat_line.line.midpoint = self.seat_line.line.midpoint % self.length
 
 		# Set BG color
-		line_fancy = self.seat_line.line.color.fancy_color
+		line_fancy = self.seat_line.line.color_d.fancy_color
 		bg_color_int = fancy.gamma_adjust(line_fancy, brightness=self.bg_brightness).pack()
 		arr = [bg_color_int for i in range(self.length)]
 
@@ -184,8 +184,8 @@ class SgtSeatedSingleplayerAnimation(SgtSeatedAnimation):
 				trannies.append(PropertyTransition(line, 'midpoint', from_pixel+steps_if_adding, line_ease, line_ease_duration))
 			else:
 				trannies.append(PropertyTransition(line, 'midpoint', from_pixel-steps_if_subtracting, line_ease, line_ease_duration))
-		if line.color != active_player.color.highlight:
-			trannies.append(ColorTransitionFunction(line.color, active_player.color.highlight, line_ease(duration=line_ease_duration)))
+		if line.color_d != active_player.color.highlight:
+			trannies.append(ColorTransitionFunction(line.color_d, active_player.color.highlight, line_ease(duration=line_ease_duration)))
 		if line.length != player_line_length:
 			trannies.append(PropertyTransition(line, 'length', player_line_length, line_ease, line_ease_duration))
 

@@ -28,15 +28,16 @@ log = logging.getLogger()
 
 class Line():
 	sparkles: list[tuple[int, SerialTransitionFunctions]]
-	def __init__(self, midpoint: float, length: float, color: DisplayedColor|StaticColor) -> None:
+	color_d: DisplayedColor
+	def __init__(self, midpoint: float, length: float, color_ds: DisplayedColor|StaticColor) -> None:
 		self.midpoint = midpoint
 		self.length = length
-		if isinstance(color, DisplayedColor):
-			self.color = color
-		elif isinstance(color, StaticColor):
-			self.color = color.create_display_color()
+		if isinstance(color_ds, DisplayedColor):
+			self.color_d = color_ds
+		elif isinstance(color_ds, StaticColor):
+			self.color_d = color_ds.create_display_color()
 		else:
-			raise TypeError(f"Expected Color, got {type(self.color)}")
+			raise TypeError(f"Expected Color, got {type(self.color_d)}")
 		self.sparkle = False
 		self.sparkles = list()
 	def draw(self, pixels: list[int]):
@@ -44,7 +45,7 @@ class Line():
 		upper_bound = round(self.midpoint + (self.length/2))
 		diff = upper_bound - lower_bound
 		for n in range(lower_bound, upper_bound):
-			pixels[n % len(pixels)] = self.color.current_color
+			pixels[n % len(pixels)] = self.color_d.current_color
 		if self.sparkle:
 			if len(self.sparkles) < round(self.length * SPARKLE_COVER):
 				unused_indices = [i for i in range(diff)]
@@ -65,8 +66,8 @@ class Line():
 				self.sparkles.remove(spark)
 			else:
 				progress = tranny.value
-				brightness = self.color.brightness * (1-progress) + progress
-				pixels[(lower_bound + spark[0]) % len(pixels)] = fancy.gamma_adjust(self.color.fancy_color, brightness=brightness).pack()
+				brightness = self.color_d.brightness * (1-progress) + progress
+				pixels[(lower_bound + spark[0]) % len(pixels)] = fancy.gamma_adjust(self.color_d.fancy_color, brightness=brightness).pack()
 
 	def __repr__(self):
 		facts = []
@@ -74,8 +75,8 @@ class Line():
 			facts.append(f'midpoint={self.midpoint}')
 		if (self.length != None):
 			facts.append(f'length={self.length}')
-		if (self.color != None):
-			facts.append(f'color={self.color}')
+		if (self.color_d != None):
+			facts.append(f'color={self.color_d}')
 		return f"<Line: {', '.join(facts)}>"
 
 class LineTransition():

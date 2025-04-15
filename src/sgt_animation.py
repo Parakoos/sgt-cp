@@ -8,17 +8,17 @@ import adafruit_logging as logging
 log = logging.getLogger()
 
 class SgtAnimation():
-	def __init__(self, color: DisplayedColor|StaticColor, *members: tuple[Animation, float|int|None, bool]) -> None:
+	def __init__(self, color_ds: DisplayedColor|StaticColor, *members: tuple[Animation, float|int|None, bool]) -> None:
 		self.members = members
 		self.current_index = -1
 		self.animation_start_ts = 0
 		self.timed_by_cycles = False
-		if isinstance(color, DisplayedColor):
-			self.displayed_color = color
-		elif isinstance(color, StaticColor):
-			self.displayed_color = color.create_display_color()
+		if isinstance(color_ds, DisplayedColor):
+			self.displayed_color = color_ds
+		elif isinstance(color_ds, StaticColor):
+			self.displayed_color = color_ds.create_display_color()
 		else:
-			raise TypeError(f"Expected Color, got {type(color)}")
+			raise TypeError(f"Expected Color, got {type(color_ds)}")
 		self.transition = None
 		self.next()
 

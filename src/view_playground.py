@@ -31,13 +31,13 @@ class ViewPlayground(View):
 
 	def switch_to_playing(self):
 		if self.state.timer_mode == TIMER_MODE_NO_TIMER:
-			self.animation = Pulse(self.pixels, speed=0.01, color=self.state.color, period=0.5)
+			self.animation = Pulse(self.pixels, speed=0.01, color=self.state.color_p, period=0.5)
 		else:
 			self.animation = PlayingAnimation(self)
 	def switch_to_simultaneous_turn(self):
-		self.animation = Comet(self.pixels, speed=0.1, color=self.state.color, tail_length=7, ring=True, reverse=True)
+		self.animation = Comet(self.pixels, speed=0.1, color=self.state.color_p, tail_length=7, ring=True, reverse=True)
 	def switch_to_admin_time(self):
-		self.animation = Comet(self.pixels, speed=0.1, color=self.state.color, tail_length=7, ring=True, reverse=True)
+		self.animation = Comet(self.pixels, speed=0.1, color=self.state.color_p, tail_length=7, ring=True, reverse=True)
 	def switch_to_paused(self):
 		self.animation = LedBlinkAnimation(self, 2, 1)
 	def switch_to_sandtimer_running(self):
@@ -72,7 +72,7 @@ class PlayingAnimation():
 		PIXEL_COUNT = len(self.view.pixels)
 		sec = (self.view.state.turn_time_sec + monotonic() - self.view.state.timestamp)
 		sec_abs = abs(sec)
-		color = self.view.state.color if sec >= 0 else self.pulsate_color(self.view.state.color)
+		color = self.view.state.color_p if sec >= 0 else self.pulsate_color(self.view.state.color_p)
 		q, mod = divmod(sec_abs, SEC_PER_LIGHT)
 		fully_lit = min(PIXEL_COUNT-1, floor(q))
 		if fully_lit > 0:

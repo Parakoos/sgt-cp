@@ -30,13 +30,13 @@ class SgtPauseAnimation(SgtSeatedAnimation):
 	def on_state_update(self, state: GameState, old_state: GameState):
 		active_player = state.get_active_player()
 		sd = self.parent.seat_definitions[active_player.seat-1] if active_player else self.parent.seat_definitions[0]
-		color = active_player.color if active_player else state.color
-		self.fg_color = color.highlight.create_display_color()
-		self.bg_color = color.dim.create_display_color()
+		color_p = active_player.color if active_player else state.color_p
+		self.fg_color = color_p.highlight.create_display_color()
+		self.bg_color = color_p.dim.create_display_color()
 		start_pixel = sd[0]
 		mid_pixel = start_pixel + len(self.parent.pixels)/2
-		line_1 = Line(midpoint=start_pixel, length=sd[1], color=self.fg_color)
-		line_2 = Line(midpoint=mid_pixel, length=sd[1], color=self.fg_color)
+		line_1 = Line(midpoint=start_pixel, length=sd[1], color_ds=self.fg_color)
+		line_2 = Line(midpoint=mid_pixel, length=sd[1], color_ds=self.fg_color)
 		self.seat_lines = [line_1, line_2]
 		self.start_ts = time.monotonic()
 		self.last_animation_ts = time.monotonic()

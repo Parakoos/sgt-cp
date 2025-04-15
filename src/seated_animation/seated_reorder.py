@@ -26,9 +26,9 @@ class SgtSeatedReorder(SgtSeatedAnimation):
 			seat = seat_0+1
 			player = self.parent.state.get_player_by_seat(seat)
 			if player == None:
-				line = Line(midpoint=s[0], length=0, color=BLACK)
+				line = Line(midpoint=s[0], length=0, color_ds=BLACK)
 			else:
-				line = Line(midpoint=s[0], length=0, color=player.color.dim)
+				line = Line(midpoint=s[0], length=0, color_ds=player.color.dim)
 			self.seat_lines.append(line)
 		self.ts_animation_start = monotonic()
 

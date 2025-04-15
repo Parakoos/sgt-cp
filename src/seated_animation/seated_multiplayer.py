@@ -11,7 +11,7 @@ log = logging.getLogger()
 class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 	def __init__(self, parent_view: ViewTableOutline):
 		super().__init__(parent_view)
-		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color=BLACK), transitions=[]) for s in self.seat_definitions)
+		self.seat_lines = list(LineTransition(Line(midpoint=s[0], length=0, color_ds=BLACK), transitions=[]) for s in self.seat_definitions)
 		self.blinks_left = 0
 		self.blink_transition = None
 		self.current_times = None
@@ -42,44 +42,43 @@ class SgtSeatedMultiplayerAnimation(SgtSeatedAnimation):
 		return has_more_transitions or self.blinks_left > 0 or self.blink_transition != None
 
 	def on_state_update(self, state: GameState, old_state: GameState):
-		for seat, line in enumerate(self.seat_definitions):
-			seat_line = self.seat_lines[seat].line
-			seat_color = seat_line.color
-			old_line_length = seat_line.length
-			new_color = None
-			new_line_length = line[1]
-			player = find_thing((p for p in state.players if p.seat == seat+1), None)
+		for seat_0, line_definition in enumerate(self.seat_definitions):
+			new_color_s = None
+			new_length = line_definition[1]
+			player = find_thing((p for p in state.players if p.seat == seat_0+1), None)
 			if not isinstance(player, Player):
-				new_color = None
+				new_color_s = None
 			elif state.state == STATE_SIM_TURN:
-				if (seat+1) in state.seat:
+				if (seat_0+1) in state.seat:
 					# Player is involved.
-					new_color = player.color.highlight
+					new_color_s = player.color.highlight
 					if player.action != 'in':
 						# Player has passed
-						new_line_length = ceil(new_line_length / 4)
-						new_color = player.color.dim
+						new_length = ceil(new_length / 4)
+						new_color_s = player.color.dim
 			elif state.state == STATE_ADMIN:
-				if (seat+1) in state.seat:
+				if (seat_0+1) in state.seat:
 					# Player is involved. Since it is an admin turn, all involved players gets a short line.
-					new_color = player.color.dim
-					new_line_length = ceil(new_line_length / 4)
+					new_color_s = player.color.dim
+					new_length = ceil(new_length / 4)
 			else:
-				new_color = player.color.dim
+				new_color_s = player.color.dim
 
-			if seat_color == BLACK and new_color != None and seat_color != new_color:
-				seat_line.length = 0
-				seat_line.color = new_color.create_display_color()
-				self.seat_lines[seat].transitions = [PropertyTransition(seat_line, 'length', new_line_length, FADE_EASE, FADE_DURATION)]
-			elif seat_color != BLACK and new_color == None:
-				self.seat_lines[seat].transitions = [PropertyTransition(seat_line, 'length', 0, FADE_EASE, FADE_DURATION)]
-			elif seat_color != BLACK and (seat_color != new_color or old_line_length != new_line_length):
+			seat = self.seat_lines[seat_0]
+			old = seat.line
+			if old.color_d == BLACK and new_color_s != None and old.color_d != new_color_s:
+				old.length = 0
+				old.color_d = new_color_s.create_display_color()
+				seat.transitions = [PropertyTransition(old, 'length', new_length, FADE_EASE, FADE_DURATION)]
+			elif old.color_d != BLACK and new_color_s == None:
+				seat.transitions = [PropertyTransition(old, 'length', 0, FADE_EASE, FADE_DURATION)]
+			elif old.color_d != BLACK and (old.color_d != new_color_s or old.length != new_length):
 				trannies = []
-				if seat_color != new_color:
-					trannies.append(ColorTransitionFunction(seat_color, new_color, FADE_EASE(0, 1, FADE_DURATION)))
-				if old_line_length != new_line_length:
-					trannies.append(PropertyTransition(seat_line, 'length', new_line_length, FADE_EASE, FADE_DURATION))
-				self.seat_lines[seat].transitions = [ParallellTransitionFunctions(*trannies)]
+				if old.color_d != new_color_s:
+					trannies.append(ColorTransitionFunction(old.color_d, new_color_s, FADE_EASE(0, 1, FADE_DURATION)))
+				if old.length != new_length:
+					trannies.append(PropertyTransition(old, 'length', new_length, FADE_EASE, FADE_DURATION))
+				seat.transitions = [ParallellTransitionFunctions(*trannies)]
 
 	def on_time_reminder(self, time_reminder_count: int):
 		self.blinks_left = min(time_reminder_count, TIME_REMINDER_MAX_PULSES)
