@@ -108,18 +108,28 @@ class SgtConnection:
 			return _failure(on_failure)
 		else:
 			return _success('Undo', on_success)
-	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+	def enqueue_send_start_game(self, seat: int|None = None, seats: list[int]|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		if self.view.state == None:
 			return _failure(on_failure)
 		if self.view.state.state != STATE_START:
 			return _failure(on_failure)
-		if seat == None:
+		if seat == None and seats == None:
 			return _success('StartGame', on_success)
-		player = self.view.state.get_player_by_seat(seat)
-		if player:
+		if seat != None and seats == None:
+			player = self.view.state.get_player_by_seat(seat)
+			if player:
+				return _success('StartGame', on_success)
+		if seat == None and seats != None and len(self.view.state.players) == len(seats):
+			# Check if all players are in the list of seats.
+			no_dupe_list = list( dict.fromkeys(seats) )
+			if len(no_dupe_list) != len(seats):
+				return _failure(on_failure)
+			for seat in seats:
+				player = self.view.state.get_player_by_seat(seat)
+				if player == None:
+					return _failure(on_failure)
 			return _success('StartGame', on_success)
-		else:
-			return _failure(on_failure)
+		return _failure(on_failure)
 
 	def enqueue_send_start_sim_turn(self, seats: set[int]):
 		if self.view.state != None and self.view.state.allow_sim_turn_start():
@@ -132,3 +142,20 @@ class SgtConnection:
 			return "Reorder"
 		else:
 			return None
+
+	def enqueue_send_join_game_or_cycle_colors(self, seat: int, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		if self.view.state.state == STATE_START:
+			player = self.view.state.get_player_by_seat(seat)
+			if player == None:
+				return _success('AddHotseatPlayer', on_success)
+			else:
+				return _success('CyclePlayerColor', on_success)
+		else:
+			return _failure(on_failure)
+
+	def enqueue_send_leave_game(self, seat: int, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		if self.view.state.state == STATE_START:
+			player = self.view.state.get_player_by_seat(seat)
+			if player != None:
+				return _success('RemovePlayer', on_success)
+		return _failure(on_failure)

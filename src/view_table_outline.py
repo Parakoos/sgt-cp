@@ -116,9 +116,9 @@ class ViewTableOutline(View):
 		from seated_animation.seated_error import SgtErrorAnimation
 		if not isinstance(self.animation, SgtErrorAnimation):
 			self.fade_to_new_animation(SgtErrorAnimation(self))
-	def switch_to_random_start_animation(self):
+	def switch_to_random_start_animation(self, start_game_mode: str):
 		from seated_animation.seated_random_start_animation import SgtSeatedRandomStartAnimation
-		self.fade_to_new_animation(SgtSeatedRandomStartAnimation(self))
+		self.fade_to_new_animation(SgtSeatedRandomStartAnimation(self, start_game_mode))
 	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		from seated_animation.seated_animation import SgtSeatedAnimation
 		if isinstance(self.animation, SgtSeatedAnimation):

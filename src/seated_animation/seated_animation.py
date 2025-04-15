@@ -40,17 +40,24 @@ class Line():
 			raise TypeError(f"Expected Color, got {type(self.color_d)}")
 		self.sparkle = False
 		self.sparkles = list()
-	def draw(self, pixels: list[int]):
-		lower_bound = round(self.midpoint - (self.length/2))
-		upper_bound = round(self.midpoint + (self.length/2))
-		diff = upper_bound - lower_bound
+	def draw(self, pixels: list[int], length_percentage: float = 1.0):
+		full_length_lower_bound = round(self.midpoint - (self.length/2))
+		full_length_upper_bound = round(self.midpoint + (self.length/2))
+		diff = full_length_upper_bound - full_length_lower_bound
+		for n in range(full_length_lower_bound, full_length_upper_bound):
+			pixels[n % len(pixels)] = 0x0
+		lower_bound = round(self.midpoint - (self.length/2) * length_percentage)
+		upper_bound = round(self.midpoint + (self.length/2) * length_percentage)
 		for n in range(lower_bound, upper_bound):
 			pixels[n % len(pixels)] = self.color_d.current_color
 		if self.sparkle:
 			if len(self.sparkles) < round(self.length * SPARKLE_COVER):
 				unused_indices = [i for i in range(diff)]
 				for spark in self.sparkles:
-					unused_indices.remove(spark[0])
+					try:
+						unused_indices.remove(spark[0])
+					except:
+						log.info(f"ERROR! {spark[0]} not in {unused_indices}")
 				if len(unused_indices) > 0:
 					spark_index = choice(unused_indices)
 					duration = uniform(SPARKLE_DURATION_MIN, SPARKLE_DURATION_MAX)
@@ -65,9 +72,11 @@ class Line():
 			if done:
 				self.sparkles.remove(spark)
 			else:
-				progress = tranny.value
-				brightness = self.color_d.brightness * (1-progress) + progress
-				pixels[(lower_bound + spark[0]) % len(pixels)] = fancy.gamma_adjust(self.color_d.fancy_color, brightness=brightness).pack()
+				i = full_length_lower_bound + spark[0]
+				if lower_bound <= i < upper_bound:
+					progress = tranny.value
+					brightness = self.color_d.brightness * (1-progress) + progress
+					pixels[i % len(pixels)] = fancy.gamma_adjust(self.color_d.fancy_color, brightness=brightness).pack()
 
 	def __repr__(self):
 		facts = []

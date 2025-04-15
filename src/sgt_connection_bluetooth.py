@@ -183,10 +183,14 @@ class SgtConnectionBluetooth(SgtConnection):
 		self._enqueue_command(super().enqueue_send_pause_off(on_success, on_failure))
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
-	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		command = super().enqueue_send_start_game(seat, on_success, on_failure)
-		if command != None and seat != None:
+	def enqueue_send_start_game(self, seat: int|None = None, seats: list[int]|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		command = super().enqueue_send_start_game(seat, seats, on_success, on_failure)
+		if command == None:
+			return False
+		if seat != None:
 			self._enqueue_command(f'{command} #{seat}')
+		elif seats != None:
+			self._enqueue_command(f'{command} #{",".join([str(s) for s in seats])}')
 		else:
 			self._enqueue_command(command)
 	def enqueue_send_start_sim_turn(self, seats: set[int]):
@@ -196,6 +200,14 @@ class SgtConnectionBluetooth(SgtConnection):
 			return True
 		else:
 			return False
+	def enqueue_send_join_game_or_cycle_colors(self, seat: int, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		action = super().enqueue_send_join_game_or_cycle_colors(seat, on_success, on_failure)
+		if action != None and seat != None:
+			self._enqueue_command(f'{action} #{seat}')
+	def enqueue_send_leave_game(self, seat: int, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		action = super().enqueue_send_leave_game(seat, on_success, on_failure)
+		if action != None and seat != None:
+			self._enqueue_command(f'{action} #{seat}')
 
 	def _poll_for_latest_state(self):
 		log.debug('Polling for new data')

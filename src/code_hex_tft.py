@@ -2,12 +2,19 @@ import adafruit_logging as logging
 log = logging.getLogger()
 log.setLevel(10)
 import board
-from game_state import GameState
+from game_state import STATE_START
 import reorder
 
 # =================== Settings =================== #
 SEAT_DEFINITIONS = [(0,6),(6,6),(12,6),(18,6),(24,6)]
-BUTTON_PINS = [board.BUTTON, board.D1, board.D2]
+BUTTON_PINS = [board.A1, board.D1, board.D2]
+# BUTTON_PINS = [board.BUTTON, board.D1, board.D2]
+button_pin_to_val_when_pressed = {
+	# board.BUTTON: False,
+	board.A1: False,
+	board.D1: True,
+	board.D2: True,
+}
 # =============== End of Settings ================ #
 
 # ---------- VIEW SETUP -------------#
@@ -37,21 +44,34 @@ viewTableOutline.set_connection(sgt_connection)
 # ---------- BUTTONS SETUP -------------#
 from buttons import Buttons
 from microcontroller import Pin
-button_pin_to_val_when_pressed = {
-	# board.BUTTON: False,
-	board.A1: True,
-	board.D1: True,
-	board.D2: True,
-}
 buttons = Buttons(button_pin_to_val_when_pressed)
 sim_turn_selection_in_progress = False
 def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
+	if view.state is None:
+		return
 	global sim_turn_selection_in_progress
 	if sim_turn_selection_in_progress:
 		# Stop reaction to buttons while the sim turn selection is in progress.
 		return
 	log.info('btn_callback: %s, %s, %s', btn_pin, presses, long_press)
-	if reorder.singleton is not None:
+	def on_success():
+		pass
+	if view.state.state == STATE_START:
+		if presses == 1 and long_press:
+			# Long pressing to start the game.
+			log.info(f"Player indicating they want to start the game")
+		elif presses == 1:
+			# Single press, join/cycle colours.
+			sgt_connection.enqueue_send_join_game_or_cycle_colors(BUTTON_PINS.index(btn_pin) + 1)
+		elif presses == 2 and long_press:
+			# Double press and hold to leave the game.
+			sgt_connection.enqueue_send_leave_game(BUTTON_PINS.index(btn_pin) + 1)
+		elif presses == 2:
+			# Double press to cycle mode. (Three modes: Total Random, set order & random first, set all)
+			from seated_animation.seated_multiplayer import SgtSeatedMultiplayerAnimation
+			if isinstance(viewTableOutline.animation, SgtSeatedMultiplayerAnimation):
+				viewTableOutline.animation.cycle_start_game_mode()
+	elif reorder.singleton is not None:
 		log.info('Buttons presses disabled during reorder')
 	elif long_press:
 		if presses == 1:
@@ -60,39 +80,29 @@ def btn_callback(btn_pin: Pin, presses: int, long_press: bool):
 				log.info(f"Reordering in progress. Stop listening to normal button presses.")
 				seat = BUTTON_PINS.index(btn_pin) + 1
 				reorder.singleton = reorder.Reorder(initiating_seat=seat)
-			elif presses == 2:
-				if view.state.allow_sim_turn_start():
-					seat = BUTTON_PINS.index(btn_pin) + 1
-					viewTableOutline.begin_sim_turn_selection(seat)
-					sim_turn_selection_in_progress = True
-				# sgt_connection.enqueue_send_toggle_pause(on_success=on_success, on_failure=tone.error)
 			else:
-				sgt_connection.enqueue_send_toggle_admin()
+				sgt_connection.enqueue_send_toggle_admin(on_success=on_success)
 		elif presses == 2:
-			# sgt_connection.enqueue_send_toggle_pause()
-			sgt_connection.enqueue_send_start_sim_turn(set([1,2]))
+			if view.state.allow_sim_turn_start():
+				seat = BUTTON_PINS.index(btn_pin) + 1
+				viewTableOutline.begin_sim_turn_selection(seat)
+				sim_turn_selection_in_progress = True
 		elif presses == 3:
-			sgt_connection.enqueue_send_undo()
-		elif presses == 4:
-			raise Exception('Test Error!')
+			sgt_connection.enqueue_send_undo(on_success=on_success)
 	else:
 		seat = BUTTON_PINS.index(btn_pin) + 1
 		if presses == 1:
-			sgt_connection.enqueue_send_primary(seat=seat)
+			sgt_connection.enqueue_send_primary(seat=seat, on_success=on_success)
 		elif presses == 2:
-			sgt_connection.enqueue_send_secondary(seat=seat)
+			sgt_connection.enqueue_send_secondary(seat=seat, on_success=on_success)
+		elif presses == 3:
+			sgt_connection.enqueue_send_toggle_pause(on_success=on_success)
 
 def pressed_keys_update_callback(pressed_keys: set[Pin]):
 	global sim_turn_selection_in_progress
-	viewTableOutline.on_pressed_seats_change(set((BUTTON_PINS.index(btn_pin) + 1 for btn_pin in pressed_keys)))
-	if len(pressed_keys) == 0:
-		# We know the sim turn selection is over once all buttons have been released
-		sim_turn_selection_in_progress = False
-
 	if view.state is None:
 		return
-	log.info(f"Pressed keys: {pressed_keys}: State={view.state.state}, StateType={view.state.state_type}")
-	if reorder.singleton is not None:
+	elif reorder.singleton is not None:
 		if len(pressed_keys) == 0:
 			log.info(f"Reordering stopped")
 			reorder.singleton = None
@@ -115,9 +125,9 @@ def on_connect():
 	for btn_pin in BUTTON_PINS:
 		buttons.set_callback(btn_pin, presses=1, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, callback = btn_callback)
+		buttons.set_callback(btn_pin, presses=3, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=1, long_press=True, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=2, long_press=True, callback = btn_callback)
 		buttons.set_callback(btn_pin, presses=3, long_press=True, callback = btn_callback)
-		buttons.set_callback(btn_pin, presses=4, long_press=True, callback = btn_callback)
 
 main_loop(sgt_connection, view, on_connect, error_handler.on_error, (buttons.loop,))

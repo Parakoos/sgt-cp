@@ -70,12 +70,10 @@ class Buttons():
 
 				if event.released and pin in self.pressed_keys and self.pressed_keys[pin].pressed_ts != None:
 					self.pressed_keys[pin].released_ts = event.timestamp
-					log.debug(f"Key released. Pin: {self.pressed_keys[pin].pin}, Presses: {self.pressed_keys[pin].presses}, TS: {self.pressed_keys[pin].released_ts}")
 				elif event.pressed:
 					self.pressed_keys[pin].presses += 1
 					self.pressed_keys[pin].pressed_ts = event.timestamp
 					self.pressed_keys[pin].released_ts = None
-					log.debug(f"Key pressed. Pin: {self.pressed_keys[pin].pin}, Presses: {self.pressed_keys[pin].presses}, TS: {self.pressed_keys[pin].pressed_ts}")
 		if pressed_keys_changed and 'PRESSED_KEYS' in self.callbacks:
 			self.callbacks['PRESSED_KEYS'](self.pressed_pins)
 

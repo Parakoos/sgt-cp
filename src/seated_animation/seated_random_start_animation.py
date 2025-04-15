@@ -15,7 +15,7 @@ START_GAME_COLOR_DURATION = get_float('TABLE_START_GAME_COLOR_DURATION', 1.0)
 
 from seated_animation.seated_animation import SgtSeatedAnimation, Line
 from view_table_outline import ViewTableOutline, BLACK
-from utils.transition import ColorTransitionFunction, RampUpDownTransitionFunction
+from utils.transition import ColorTransitionFunction, RampUpDownTransitionFunction, PropertyTransition, SerialTransitionFunctions
 from random import choice, randint, random
 from game_state import Player
 import time
@@ -24,11 +24,16 @@ log = logging.getLogger()
 
 class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 	random_player: Player
-	def __init__(self, parent_view: ViewTableOutline):
+	shuffled_players: list[Player]
+	def __init__(self, parent_view: ViewTableOutline, start_game_mode: str):
 		super().__init__(parent_view)
-		player_count = len(self.parent.state.players)
-		selected_player_index = randint(0, player_count - 1)
-		self.selected_player = self.parent.state.players[selected_player_index]
+		self.start_game_mode = start_game_mode
+		self.shuffled_players = []
+		unshuffled_players = self.parent.state.players.copy()
+		while len(unshuffled_players) > 0:
+			random_index = randint(0, len(unshuffled_players) - 1)
+			self.shuffled_players.append(unshuffled_players.pop(random_index))
+		self.selected_player = self.shuffled_players[0]
 		selected_seat_definition = self.seat_definitions[self.selected_player.seat-1]
 		selected_player_midpoint = selected_seat_definition[0]
 		rotations_to_spin = randint(START_GAME_SPIN_MIN_ROTATIONS, START_GAME_SPIN_MAX_ROTATIONS)
@@ -52,7 +57,34 @@ class SgtSeatedRandomStartAnimation(SgtSeatedAnimation):
 			self.line.sparkle = True
 			self.line.color_d = self.selected_player.color.highlight.create_display_color()
 			self.bg_color = self.selected_player.color.dim.create_display_color()
-			self.parent.sgt_connection.enqueue_send_start_game(self.selected_player.seat)
+
+			if self.start_game_mode == 'scramble_player_order' and len(self.shuffled_players) > 1:
+				index = 1
+				pulse_transitions = list()
+				pulse_lines = list()
+				while index < len(self.shuffled_players):
+					player = self.shuffled_players[index]
+					seat = player.seat
+					seat_def = self.seat_definitions[seat-1]
+					pulse_line = Line(midpoint=seat_def[0], length=0, color_ds=player.color.highlight)
+					pulse_lines.append(pulse_line)
+					pulse_transitions.append(PropertyTransition(pulse_line, 'length', seat_def[1], START_GAME_SPIN_EASE_IN, START_GAME_SPIN_EASE_IN_DURATION))
+					pulse_transitions.append(PropertyTransition(pulse_line, 'length', 0, START_GAME_SPIN_EASE_IN, START_GAME_SPIN_EASE_IN_DURATION))
+					index += 1
+				pulse_animations = SerialTransitionFunctions(pulse_transitions)
+				while True:
+					is_done = pulse_animations.loop()
+					self.pixels.fill(self.bg_color.current_color)
+					self.line.draw(self.pixels)
+					for pulse_line in pulse_lines:
+						pulse_line.draw(self.pixels)
+					self.pixels.show()
+					if is_done:
+						break
+				seats = [player.seat for player in self.shuffled_players]
+				self.parent.sgt_connection.enqueue_send_start_game(seats=seats)
+			else:
+				self.parent.sgt_connection.enqueue_send_start_game(seat=self.selected_player.seat)
 			self.start_game_command_sent = True
 		else:
 			if self.color_transition_fg == None or self.color_transition_bg == None:

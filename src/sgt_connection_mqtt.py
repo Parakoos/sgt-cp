@@ -89,9 +89,10 @@ class SgtConnectionMQTT(SgtConnection):
 			self.command_to_send.append((value, seat, seats))
 
 	def send_command(self) -> bool:
-		if len(self.command_to_send) == 0 or (self.view.state and self.view.state.ts_command_sent_based_on_this != None):
+		if len(self.command_to_send) == 0 or (self.view.state != None and self.view.state.ts_command_sent_based_on_this != None and self.view.state.game_state_version != None):
 			return False
 		else:
+			log.info(f"MQTT command queue length: ${len(self.command_to_send)}")
 			self._send(*self.command_to_send.pop(0))
 			return True
 
@@ -104,9 +105,10 @@ class SgtConnectionMQTT(SgtConnection):
 		gameStateVersion = self.view.state.game_state_version
 		action_map = {"gameStateVersion": gameStateVersion, "action": value}
 		if (value == 'StartGame'):
-			action_map['setPlayerOrderToSeatOrder'] = True
 			if seat != None:
 				action_map["firstPlayerSeat"] = seat
+			elif seats != None:
+				action_map["playerOrderAsSeats"] = seats
 		elif seat != None:
 			action_map["seat"] = seat
 		elif seats != None:
@@ -167,8 +169,8 @@ class SgtConnectionMQTT(SgtConnection):
 		self._enqueue_command(super().enqueue_send_pause_off(on_success, on_failure))
 	def enqueue_send_undo(self, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
 		self._enqueue_command(super().enqueue_send_undo(on_success, on_failure))
-	def enqueue_send_start_game(self, seat: int|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
-		self._enqueue_command(super().enqueue_send_start_game(seat, on_success, on_failure), seat=seat)
+	def enqueue_send_start_game(self, seat: int|None = None, seats: list[int]|None = None, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_command(super().enqueue_send_start_game(seat, seats, on_success, on_failure), seat=seat, seats=seats)
 	def enqueue_send_start_sim_turn(self, seats: set[int]):
 		command = super().enqueue_send_start_sim_turn(seats)
 		if command != None:
@@ -183,3 +185,7 @@ class SgtConnectionMQTT(SgtConnection):
 			return True
 		else:
 			return False
+	def enqueue_send_join_game_or_cycle_colors(self, seat: int, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_command(super().enqueue_send_join_game_or_cycle_colors(seat, on_success, on_failure), seat=seat)
+	def enqueue_send_leave_game(self, seat: int, on_success: callable[[], None] = None, on_failure: callable[[], None] = None):
+		self._enqueue_command(super().enqueue_send_leave_game(seat, on_success, on_failure), seat=seat)
