@@ -2,7 +2,7 @@ import adafruit_logging as logging
 log = logging.getLogger()
 from time import monotonic
 from easing import EasingBase
-from utils.color import DisplayedColor, BLACK, StaticColor
+from utils.color import DisplayedColor, BLACK, StaticColor, ColorMix
 from ulab.numpy import trapz
 import adafruit_fancyled.adafruit_fancyled as fancy
 
@@ -91,40 +91,9 @@ class ColorTransitionFunction(TransitionFunction):
 		if self.target_color == self.color_to_update:
 			return True
 		if self.start_time == None:
-			if self.color_to_update.is_black():
-				self.starting_fancy = self.target_color.fancy_color
-				self.starting_brightness = 0.0
-			else:
-				self.starting_fancy = self.color_to_update.fancy_color
-				self.starting_brightness = self.color_to_update.brightness
-
-			if self.target_color.is_black():
-				self.target_fancy = self.color_to_update.fancy_color
-				self.target_brightness = 0.0
-			else:
-				self.target_fancy = self.target_color.fancy_color
-				self.target_brightness = self.target_color.brightness
-
-			self.hsv_transition = isinstance(self.starting_fancy, fancy.CHSV) and isinstance(self.target_fancy, fancy.CHSV)
-			if self.hsv_transition:
-				self.starting_hue = self.starting_fancy.hue
-				distance_if_adding = (self.target_fancy.hue-self.starting_hue) % 1
-				distance_if_subtracting = (self.starting_hue-self.target_fancy.hue) % 1
-				if (distance_if_adding <= distance_if_subtracting):
-					self.target_hue = self.starting_hue + distance_if_adding
-				else:
-					self.target_hue = self.starting_hue - distance_if_subtracting
+			self.color_mix = ColorMix(StaticColor(self.color_to_update.fancy_color, self.color_to_update.brightness), self.target_color)
 		done = super().loop()
-		progress = self.value
-		if self.hsv_transition:
-			anti_progress = (1-progress)
-			h = (progress * self.target_hue + anti_progress * self.starting_hue) % 1
-			s = progress * self.target_fancy.saturation + anti_progress * self.starting_fancy.saturation
-			v = progress * self.target_fancy.value + anti_progress * self.starting_fancy.value
-			new_fancy = fancy.CHSV(h,s,v)
-		else:
-			new_fancy = fancy.mix(self.starting_fancy, self.target_fancy, progress) if self.starting_fancy != self.target_fancy else self.starting_fancy
-		new_brightness = round(self.starting_brightness * (1-progress) + self.target_brightness * progress, 2)
+		new_fancy, new_brightness = self.color_mix.mix(self.value)
 		self.color_to_update.update(new_fancy, new_brightness)
 		return done
 
@@ -204,17 +173,19 @@ class RampUpDownTransitionFunction():
 
 class BoomerangEase():
 	ease: EasingBase
-	def __init__(self, start_position: float, mid_position: float, ease: EasingBase, duration: float) -> None:
+	def __init__(self, start_position: float, mid_position: float, ease: EasingBase, duration: float, loop = False) -> None:
 		self.ease = ease(start_position, mid_position, duration/2)
 		self.duration = duration
+		self.loop = loop
 
-	def func(self, time:float):
-		if time <= self.duration/2:
+	def func(self, time:float) -> float:
+		t = time % self.duration if self.loop else time
+		if t <= self.duration/2:
 			# For example, duration=200, time=25, then we are 25/100=25% into the ease function.
-			return self.ease(time)
-		elif time > self.duration:
+			return self.ease(t)
+		elif t > self.duration:
 			# We've overshot. Return the start value.
-			return self.ease.start
+			return float(self.ease.start)
 		else:
 			# For example, duration=200, time=125, then we are 25/100=25% into the "return" ease function, meaning
 			# we are 75% into the ease function.
@@ -223,4 +194,4 @@ class BoomerangEase():
 			# duration=200, time=150, ease=50
 			# duration=200, time=175, ease=50
 			# duration=200, time=200, ease=0
-			return self.ease(self.duration - time)
+			return self.ease(self.duration - t)

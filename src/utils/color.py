@@ -121,3 +121,39 @@ WHITE = PlayerColor('0000ff', True, False)
 BLACK = PlayerColor('000000', True, False)
 BLUE = PlayerColor('aaffff', True, False)
 RED = PlayerColor('00ffff', True, False)
+GREEN = PlayerColor('55ffff', True, False)
+
+class ColorMix():
+	def __init__(self, from_color: StaticColor, to_color: StaticColor|None) -> None:
+		if from_color.is_black():
+			self.starting_fancy = self.target_color.fancy_color
+			self.starting_brightness = 0.0
+		else:
+			self.starting_fancy = from_color.fancy_color
+			self.starting_brightness = from_color.brightness
+		if to_color.is_black():
+			self.target_fancy = from_color.fancy_color
+			self.target_brightness = 0.0
+		else:
+			self.target_fancy = to_color.fancy_color
+			self.target_brightness = to_color.brightness
+		self.hsv_transition = isinstance(self.starting_fancy, fancy.CHSV) and isinstance(self.target_fancy, fancy.CHSV)
+		if self.hsv_transition:
+			self.starting_hue = self.starting_fancy.hue
+			distance_if_adding = (self.target_fancy.hue-self.starting_hue) % 1
+			distance_if_subtracting = (self.starting_hue-self.target_fancy.hue) % 1
+			if (distance_if_adding <= distance_if_subtracting):
+				self.target_hue = self.starting_hue + distance_if_adding
+			else:
+				self.target_hue = self.starting_hue - distance_if_subtracting
+	def mix(self, progress: float):
+		if self.hsv_transition:
+			anti_progress = (1-progress)
+			h = (progress * self.target_hue + anti_progress * self.starting_hue) % 1
+			s = progress * self.target_fancy.saturation + anti_progress * self.starting_fancy.saturation
+			v = progress * self.target_fancy.value + anti_progress * self.starting_fancy.value
+			new_fancy = fancy.CHSV(h,s,v)
+		else:
+			new_fancy = fancy.mix(self.starting_fancy, self.target_fancy, progress) if self.starting_fancy != self.target_fancy else self.starting_fancy
+		new_brightness = float(round(self.starting_brightness * (1-progress) + self.target_brightness * progress, 2))
+		return (new_fancy, new_brightness)

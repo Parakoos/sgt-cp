@@ -8,17 +8,15 @@ import adafruit_logging as logging
 log = logging.getLogger()
 
 class SgtAnimation():
-	def __init__(self, color_ds: DisplayedColor|StaticColor, *members: tuple[Animation, float|int|None, bool]) -> None:
+	def __init__(self, color_s: StaticColor, *members: tuple[Animation, float|int|None, bool]) -> None:
 		self.members = members
 		self.current_index = -1
 		self.animation_start_ts = 0
 		self.timed_by_cycles = False
-		if isinstance(color_ds, DisplayedColor):
-			self.displayed_color = color_ds
-		elif isinstance(color_ds, StaticColor):
-			self.displayed_color = color_ds.create_display_color()
+		if isinstance(color_s, StaticColor):
+			self.displayed_color = color_s.create_display_color()
 		else:
-			raise TypeError(f"Expected Color, got {type(color_ds)}")
+			raise TypeError(f"Expected Color, got {type(color_s)}")
 		self.transition = None
 		self.next()
 
@@ -38,7 +36,7 @@ class SgtAnimation():
 		if self.transition:
 			if self.transition.loop():
 				self.transition = None
-			self.set_color(self.displayed_color)
+			animation.color = self.displayed_color.current_color
 
 		animation.animate(show)
 		if animation_timing == None:
@@ -52,12 +50,8 @@ class SgtAnimation():
 				self.next()
 		return not(self.transition == None and self.members[self.current_index][2])
 
-	def set_color(self, new_display_color: DisplayedColor, transition: EasingBase|None = None):
-		if transition:
-			self.transition = ColorTransitionFunction[self.displayed_color, new_display_color, transition]
-		else:
-			self.displayed_color = new_display_color
-			self.members[self.current_index][0].color = self.displayed_color.current_color
+	def transition_color(self, color: StaticColor, transition: EasingBase):
+		self.transition = ColorTransitionFunction(self.displayed_color, color, transition)
 
 class SgtAnimationGroup():
 	def __init__(self, animations: list[SgtAnimation], parent_pixel_obj: PixelBuf) -> None:
@@ -71,6 +65,10 @@ class SgtAnimationGroup():
 		self.parent_pixel_obj.show()
 		return busy_animating
 
+# We use this instead of the basic Solid animation because this
+# forces updates to the color to come through immediately, while
+# the old one has a 'speed' limit to updates, so color transitions
+# do not come through.
 class SgtSolid(Animation):
 	def __init__(self, pixel_object: PixelBuf, color: int):
 		super().__init__(pixel_object, 0.01, color)

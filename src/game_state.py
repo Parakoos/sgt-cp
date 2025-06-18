@@ -313,7 +313,7 @@ class GameState():
 				turn_time = self.turn_time_sec + time_added_by_monotonic
 			elif self.state == STATE_PAUSE:
 				turn_time = self.turn_time_sec + time_added_by_monotonic
-			elif self.state in [self.state == STATE_NOT_RUNNING, STATE_FINISHED, STATE_NOT_CONNECTED]:
+			elif self.state in [STATE_NOT_RUNNING, STATE_FINISHED, STATE_NOT_CONNECTED]:
 				pass
 			else:
 				raise Exception(f'Unkown state: {self.state}')
