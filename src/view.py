@@ -69,16 +69,13 @@ class View():
 		pass
 	def switch_to_no_game(self):
 		self.state = None
-		self.time_reminder_check_timeout = 0
-		self.current_times = None
+		self._clear_time_reminder()
 	def switch_to_not_connected(self):
 		self.state = None
-		self.time_reminder_check_timeout = 0
-		self.current_times = None
+		self._clear_time_reminder()
 	def switch_to_error(self):
 		self.state = None
-		self.time_reminder_check_timeout = 0
-		self.current_times = None
+		self._clear_time_reminder()
 	def on_state_update(self, state: GameState|None, old_state: GameState|None):
 		pass
 	def on_time_reminder(self, time_reminder_count: int):
@@ -88,8 +85,7 @@ class View():
 	def set_state(self, state: GameState | None, force=False):
 		old_state = self.state
 		self.state = state
-		self.time_reminder_check_timeout = 0
-		self.current_times = None
+		self._clear_time_reminder()
 		if self.state == None:
 			log.debug('No state in view.set_state. Go to no game')
 			self.switch_to_no_game()
@@ -119,6 +115,11 @@ class View():
 	def record_polling_delay(self, delay: float):
 		self.polling_delays.append(delay)
 		self.polling_delays = self.polling_delays[0:5]
+
+	def _clear_time_reminder(self):
+		self.time_reminder_check_timeout = 0
+		self.current_times = None
+		self.on_time_reminder(0)
 
 def check_if_crossed_time_border(time_borders: tuple[int], time_lower_bound: int, time_upper_bound: int):
 	"""Checks if we have just crossed a time border.

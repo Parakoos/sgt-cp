@@ -7,7 +7,7 @@ from adafruit_led_animation.animation.rainbow import Rainbow
 # These are sent on connection to the SGT to pre-populate the Action/Write scripts for quick save.
 BLE_DEVICE_NAME = "Jewel"
 BLUETOOTH_FIELD_DIVIDER = ';'
-BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColorHsv','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime']
+BLUETOOTH_FIELD_ORDER = ['sgtTimerMode','sgtState','sgtColorHsv','sgtTurnTime','sgtPlayerTime','sgtTotalPlayTime','sgtTimeReminders']
 
 # ---------- SHARED IMPORTS -------------#
 import board
@@ -16,12 +16,26 @@ import board
 from view_multi import ViewMulti
 from view_console import ViewConsole
 from view_mono_light import ViewMonoLight
+from view_time_reminder_onoff import ViewTimeReminderOnOff
 from pausable_pixels import PausablePixels
-dots = PausablePixels(board.D6, 12+7, brightness=0.3, auto_write=False)
+from adafruit_led_animation.helper import PixelSubset
+_dots = PausablePixels(board.D6, 19, brightness=0.3, auto_write=False)
+outer_ring = PixelSubset(_dots, 0, 12)
+central_dot = PixelSubset(_dots, 12, 13)
+middle_ring = PixelSubset(_dots, 13, 19)
+central_disk = PixelSubset(_dots, 12, 19)
+
+def vibrate_on():
+	central_disk.fill((255,0,0))
+	central_disk.show()
+def vibrate_off():
+	central_disk.fill((0,0,0))
+	central_disk.show()
 
 view = ViewMulti([
 	ViewConsole(),
-	ViewMonoLight(dots),
+	ViewMonoLight(outer_ring),
+	ViewTimeReminderOnOff(vibrate_on, vibrate_off),
 	])
 view.set_state(None)
 
@@ -56,12 +70,14 @@ def btn_callback(pin: Pin, presses: int, long_press: bool):
 
 def pressed_keys_callback(pins: set[Pin]):
 	if len(pins) == 0:
-		dots.pause = False
+		_dots.pause = False
+		central_dot.fill(0x0)
+		central_dot.show()
 	else:
-		dots.pause = False
-		dots.fill(0xFFFFFF)
-		dots.show()
-		dots.pause = True
+		_dots.pause = False
+		central_dot.fill(0xFFFFFF)
+		central_dot.show()
+		_dots.pause = True
 
 # ---------- MAIN LOOP -------------#
 from loop import main_loop, ErrorHandlerResumeOnButtonPress
